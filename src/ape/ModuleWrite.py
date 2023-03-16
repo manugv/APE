@@ -62,7 +62,6 @@ class WriteData:
         viirs_data_keys = [
             "latitude",
             "longitude",
-            "bright_ti4",
             "scan",
             "track",
             "acq_date",
@@ -71,7 +70,6 @@ class WriteData:
             "instrument",
             "confidence",
             "version",
-            "bright_ti5",
             "frp",
             "daynight",
         ]
