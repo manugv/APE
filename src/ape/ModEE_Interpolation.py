@@ -53,12 +53,12 @@ class Regular_2d_Interpolate:
         [kx, ky] = self.__get_loc(pt)
 
         # compute difference ratio between given pt and coordinates of vortices
-        xd = self.__get_differences(pt[0], flow.lat[kx - 1: kx + 1])
-        yd = self.__get_differences(pt[1], flow.lon[ky - 1: ky + 1])
+        xd = self.__get_differences(pt[0], flow.lat[kx - 1 : kx + 1])
+        yd = self.__get_differences(pt[1], flow.lon[ky - 1 : ky + 1])
 
         # get velocities at those vertices
-        u1 = flow.u[time, kx - 1: kx + 1, ky - 1: ky + 1]
-        v1 = flow.v[time, kx - 1: kx + 1, ky - 1: ky + 1]
+        u1 = flow.u[time, kx - 1 : kx + 1, ky - 1 : ky + 1]
+        v1 = flow.v[time, kx - 1 : kx + 1, ky - 1 : ky + 1]
 
         # Get velocity fact*(x1*(vel*y1))
         vel_u = np.matmul(xd, np.matmul(u1, yd))
@@ -128,8 +128,8 @@ class Interpolate_3d:
             [kx, ky] = (np.multiply((pt[:2] - self.low_lim), self.dxi)).astype(int)
             # compute difference ratio between given pt and
             # coordinates of vortices
-            self.xd[:] = self.__get_differences(pt[0], flow.lat[kx: kx + 2])
-            self.yd[:] = self.__get_differences(pt[1], flow.lon[ky: ky + 2])
+            self.xd[:] = self.__get_differences(pt[0], flow.lat[kx : kx + 2])
+            self.yd[:] = self.__get_differences(pt[1], flow.lon[ky : ky + 2])
             # Interpolate in z direction
             # 8 points in cube become 4 points
             # z has 4 points as it is non-uniform

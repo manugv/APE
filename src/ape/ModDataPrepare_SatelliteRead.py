@@ -138,11 +138,23 @@ def recompute_qavalues(z_cloud, solar_za, aerosol_thickness):
     """
     _sh = z_cloud.shape
     qa = np.zeros(_sh)
-    qa[(aerosol_thickness.data < 0.5) & (z_cloud.data < 500) & ~z_cloud.mask & ~aerosol_thickness.mask] = 1
-    qa[(aerosol_thickness.data >= 0.5) & (z_cloud.data < 5000) & ~z_cloud.mask & ~aerosol_thickness.mask] = 0.7
+    qa[
+        (aerosol_thickness.data < 0.5)
+        & (z_cloud.data < 500)
+        & ~z_cloud.mask
+        & ~aerosol_thickness.mask
+    ] = 1
+    qa[
+        (aerosol_thickness.data >= 0.5)
+        & (z_cloud.data < 5000)
+        & ~z_cloud.mask
+        & ~aerosol_thickness.mask
+    ] = 0.7
     qa[
         ((aerosol_thickness.data >= 0.5) & (z_cloud.data >= 5000))
-        | ((aerosol_thickness.data <= 0.5) & (z_cloud.data >= 500)) & ~z_cloud.mask & ~aerosol_thickness.mask
+        | ((aerosol_thickness.data <= 0.5) & (z_cloud.data >= 500))
+        & ~z_cloud.mask
+        & ~aerosol_thickness.mask
     ] = 0.4
     qa[(solar_za > 80) | z_cloud.mask | aerosol_thickness.mask] = 0
     return np.ma.array(qa)

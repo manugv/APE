@@ -15,7 +15,6 @@ from copy import copy
 
 class InitializeSim:
     def __init__(self, src, transform, param, firedata, firetime):
-
         # Simulation type
         self.simtype = copy(param.param_disp.simtype)
         # Define simulation parameters

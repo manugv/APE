@@ -10,6 +10,7 @@ from scipy.interpolate import LinearNDInterpolator as lint
 import numpy as np
 from skimage.filters import gaussian, threshold_local, sobel
 from skimage.segmentation import watershed
+
 # from skimage.morphology import medial_axis
 from skimage.measure import label
 from ModuleDataContainers import DataContainer
@@ -230,9 +231,7 @@ def segment_image_plume(data, transform, blocksize=1):
     seg_vars = watershed_segmentation(co_gauss.copy(), mask)
 
     # Check if plume is present
-    label_id, flag = get_segmented_plume(
-        seg_vars.labeled_img, blocksize, _lat, _lon, transform
-    )
+    label_id, flag = get_segmented_plume(seg_vars.labeled_img, blocksize, _lat, _lon, transform)
 
     seg_vars.__setattr__("label_id", label_id)
     seg_vars.__setattr__("f_plumedetect", flag)

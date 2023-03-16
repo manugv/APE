@@ -40,7 +40,6 @@ def check_get_data(day, params):
 
 
 def run(filename):
-
     # Read input file
     params = InputParameters(filename)
 
@@ -121,7 +120,6 @@ def run(filename):
 
                         # Later activate this flag to only save good plumes that are filtered
                         if fire_plumecontainer.f_firearoundplume:
-
                             # get injection ht
                             fire_viirscontainer.insert(
                                 2,

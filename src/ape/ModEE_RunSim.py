@@ -18,7 +18,6 @@ from ModuleTransform import TransformCoords
 
 
 def compute_emissions(day, globalparams, fire_satdata, fire_viirs, plumecontainer):
-
     # Create a transform
     transform = TransformCoords(fire_satdata.source)
 

@@ -22,10 +22,10 @@ class RefineGridsUniform:
         """
         xnew = np.zeros((nx, ny))
         # splits single box into multiple based on no_times
-        dx = (x[1:, :] - x[:-1, :])/self.no_times
-        xnew[::self.no_times, :] = x
+        dx = (x[1:, :] - x[:-1, :]) / self.no_times
+        xnew[:: self.no_times, :] = x
         for i in range(1, self.no_times):
-            xnew[i::self.no_times, :] = x[:-1, :] + dx*i
+            xnew[i :: self.no_times, :] = x[:-1, :] + dx * i
         return xnew
 
     def split_data_y(self, y, nx, ny):
@@ -34,31 +34,31 @@ class RefineGridsUniform:
         """
         ynew = np.zeros((nx, ny))
         # splits single box into multiple based on no_times
-        dy = (y[:, 1:] - y[:, :-1])/self.no_times
-        ynew[:, ::self.no_times] = y
+        dy = (y[:, 1:] - y[:, :-1]) / self.no_times
+        ynew[:, :: self.no_times] = y
         for i in range(1, self.no_times):
-            ynew[:, i::self.no_times] = y[:, :-1] + dy*i
+            ynew[:, i :: self.no_times] = y[:, :-1] + dy * i
         return ynew
 
     @staticmethod
     def get_center_values(x):
-        x1 = (x[1:, :] + x[:-1, :])*0.5
-        return (x1[:, 1:] + x1[:, :-1])*0.5
+        x1 = (x[1:, :] + x[:-1, :]) * 0.5
+        return (x1[:, 1:] + x1[:, :-1]) * 0.5
 
     def resize_values(self, z):
         orig = z.shape
-        nx = orig[0]*self.no_times
-        ny = orig[1]*self.no_times
+        nx = orig[0] * self.no_times
+        ny = orig[1] * self.no_times
         # put values in x direction
         z_new = np.zeros((nx, orig[1]), dtype=z.dtype)
-        z_new[::self.no_times, :] = z
+        z_new[:: self.no_times, :] = z
         for i in range(1, self.no_times):
-            z_new[i::self.no_times, :] = z
+            z_new[i :: self.no_times, :] = z
         # put values in y direction
         z_new1 = np.zeros((nx, ny), dtype=z.dtype)
-        z_new1[:, ::self.no_times] = z_new
+        z_new1[:, :: self.no_times] = z_new
         for i in range(1, self.no_times):
-            z_new1[:, i::self.no_times] = z_new
+            z_new1[:, i :: self.no_times] = z_new
         return z_new1
 
     # REFINE DATA
@@ -71,15 +71,15 @@ class RefineGridsUniform:
         sh = x.shape
         orig_nx = sh[0] - 1
         orig_ny = sh[1] - 1
-        nx = orig_nx*self.no_times+1
-        ny = orig_ny*self.no_times+1
+        nx = orig_nx * self.no_times + 1
+        ny = orig_ny * self.no_times + 1
 
         # define new arrays for new data
-        _extx = self.split_data_x(x, nx, orig_ny+1)
+        _extx = self.split_data_x(x, nx, orig_ny + 1)
         x_nodes = self.split_data_y(_extx, nx, ny)
         x_centers = self.get_center_values(x_nodes)
 
-        _exty = self.split_data_x(y, nx, orig_ny+1)
+        _exty = self.split_data_x(y, nx, orig_ny + 1)
         y_nodes = self.split_data_y(_exty, nx, ny)
         y_centers = self.get_center_values(y_nodes)
         return x_nodes, y_nodes, x_centers, y_centers
@@ -96,10 +96,10 @@ class RefineGrids:
         """
         xnew = np.zeros((nx, ny))
         # splits single box into multiple based on no_times
-        dx = (x[1:, :] - x[:-1, :])/self.no_times_x
-        xnew[::self.no_times_x, :] = x
+        dx = (x[1:, :] - x[:-1, :]) / self.no_times_x
+        xnew[:: self.no_times_x, :] = x
         for i in range(1, self.no_times_x):
-            xnew[i::self.no_times_x, :] = x[:-1, :] + dx*i
+            xnew[i :: self.no_times_x, :] = x[:-1, :] + dx * i
         return xnew
 
     def split_data_y(self, y, nx, ny):
@@ -108,31 +108,31 @@ class RefineGrids:
         """
         ynew = np.zeros((nx, ny))
         # splits single box into multiple based on no_times
-        dy = (y[:, 1:] - y[:, :-1])/self.no_times_y
-        ynew[:, ::self.no_times_y] = y
+        dy = (y[:, 1:] - y[:, :-1]) / self.no_times_y
+        ynew[:, :: self.no_times_y] = y
         for i in range(1, self.no_times_y):
-            ynew[:, i::self.no_times_y] = y[:, :-1] + dy*i
+            ynew[:, i :: self.no_times_y] = y[:, :-1] + dy * i
         return ynew
 
     @staticmethod
     def get_center_values(x):
-        x1 = (x[1:, :] + x[:-1, :])*0.5
-        return (x1[:, 1:] + x1[:, :-1])*0.5
+        x1 = (x[1:, :] + x[:-1, :]) * 0.5
+        return (x1[:, 1:] + x1[:, :-1]) * 0.5
 
     def resize_values(self, z):
         orig = z.shape
-        nx = orig[0]*self.no_times_x
-        ny = orig[1]*self.no_times_y
+        nx = orig[0] * self.no_times_x
+        ny = orig[1] * self.no_times_y
         # put values in x direction
         z_new = np.zeros((nx, orig[1]), dtype=z.dtype)
-        z_new[::self.no_times_x, :] = z
+        z_new[:: self.no_times_x, :] = z
         for i in range(1, self.no_times_x):
-            z_new[i::self.no_times_x, :] = z
+            z_new[i :: self.no_times_x, :] = z
         # put values in y direction
         z_new1 = np.zeros((nx, ny), dtype=z.dtype)
-        z_new1[:, ::self.no_times_y] = z_new
+        z_new1[:, :: self.no_times_y] = z_new
         for i in range(1, self.no_times_y):
-            z_new1[:, i::self.no_times_y] = z_new
+            z_new1[:, i :: self.no_times_y] = z_new
         return z_new1
 
     # REFINE DATA
@@ -145,15 +145,15 @@ class RefineGrids:
         sh = x.shape
         orig_nx = sh[0] - 1
         orig_ny = sh[1] - 1
-        nx = orig_nx*self.no_times_x+1
-        ny = orig_ny*self.no_times_y+1
+        nx = orig_nx * self.no_times_x + 1
+        ny = orig_ny * self.no_times_y + 1
 
         # define new arrays for new data
-        _extx = self.split_data_x(x, nx, orig_ny+1)
+        _extx = self.split_data_x(x, nx, orig_ny + 1)
         x_nodes = self.split_data_y(_extx, nx, ny)
         x_centers = self.get_center_values(x_nodes)
 
-        _exty = self.split_data_x(y, nx, orig_ny+1)
+        _exty = self.split_data_x(y, nx, orig_ny + 1)
         y_nodes = self.split_data_y(_exty, nx, ny)
         y_centers = self.get_center_values(y_nodes)
         return x_nodes, y_nodes, x_centers, y_centers

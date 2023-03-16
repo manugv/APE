@@ -57,7 +57,6 @@ def __create_timecollection(
     geometry_ref,
     attr_name,
 ):
-
     timegrid = mx.creategrid(
         domain, Name=grid_name, GridType="Collection", CollectionType="Temporal"
     )
@@ -82,7 +81,6 @@ def __create_timecollection(
 
 
 def __create_particleseries(domain, name, particleinfo, fileloc):
-
     timegrid = mx.creategrid(domain, Name=name, GridType="Collection", CollectionType="Temporal")
     # time loop of grids
     for i in range(len(particleinfo)):
