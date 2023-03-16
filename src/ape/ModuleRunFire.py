@@ -39,7 +39,7 @@ def check_get_data(day, params):
     return o_flag, viirsdata, firesrcs
 
 
-def run(filename):
+def run_fire(filename):
     # Read input file
     params = InputParameters(filename)
 
@@ -71,72 +71,72 @@ def run(filename):
             # while processing, some fireclusters are integrated with each other.
             if firesrcs.readflag[f_id]:
                 src = [firesrcs.latitude[f_id], firesrcs.longitude[f_id]]  # source of fire
-                print(f"fire index:- {f_id}     src:- {src}")
+                print(
+                    f"label:- {firesrcs.labels[f_id]}  fire index:- {f_id}  src:- {src}  orbit:- {firesrcs.orbits[f_id]}"
+                )
                 # Flag to say the data is read or not
                 if read_orbit != firesrcs.orbits[f_id]:
                     orbit_satdata = readsatellitedata(params, firesrcs.orbits[f_id])
+
                 # Extract satellite data based on fire source
-                fire_satellitecontainer = extract_and_filter_satellitedata(orbit_satdata, src)
+                satellitecontainer = extract_and_filter_satellitedata(orbit_satdata, src)
                 print(
                     "      Good satellite data filter: ",
-                    fire_satellitecontainer.f_good_satellite_data,
+                    satellitecontainer.f_good_satellite_data,
                 )
 
                 # PLUME DETECTION
-                if fire_satellitecontainer.f_good_satellite_data:  # If orbit data is good
+                if satellitecontainer.f_good_satellite_data:  # If orbit data is good
                     # Plume detection : segment image
                     transform = TransformCoords(src)
-                    fire_plumecontainer = segment_image_plume(fire_satellitecontainer, transform)
+                    plumecontainer = segment_image_plume(satellitecontainer, transform)
                     # Print if plume is segmented or not
-                    print(f"image segmented : {fire_plumecontainer.f_plumedetect}")
+                    print(f"        image segmented : {plumecontainer.f_plumedetect}")
+
                     # Check for other fires nearby and filter the plume
-                    if fire_plumecontainer.f_plumedetect:
+                    if plumecontainer.f_plumedetect:
                         # Give this fire an id as plume is detected
-                        fire_satellitecontainer.__setattr__(
-                            "fire_name", "Fire_" + str(f_id).zfill(3)
-                        )
-                        fire_satellitecontainer.__setattr__("fire_id", f_id)
+                        satellitecontainer.__setattr__("fire_name", "Fire_" + str(f_id).zfill(3))
+                        satellitecontainer.__setattr__("fire_id", f_id)
 
                         # filter for other fires around
-                        firedata_roi, f_plumefilter, firesrcs = filter_good_plumes(
+                        f_plumefilter, firesrcs = filter_good_plumes(
                             f_id,
-                            fire_satellitecontainer,
-                            fire_plumecontainer.plumemask,
+                            satellitecontainer,
+                            plumecontainer.plumemask,
                             firesrcs,
                             viirsdata,
                         )
-                        fire_plumecontainer.__setattr__("f_firearoundplume", f_plumefilter)
-                        fire_viirscontainer = firedata_roi.loc[
-                            viirsdata.labels == firesrcs.labels[f_id]
-                        ]
+                        plumecontainer.__setattr__("f_firearoundplume", f_plumefilter)
+                        viirscontainer = viirsdata.loc[viirsdata.labels == firesrcs.labels[f_id]]
                         # firecontainer.__setattr__("viirs_data", src_fire)
                         # Write data
                         writedata.firegrpname = (
-                            "D" + str(day.day).zfill(2) + "_" + fire_satellitecontainer.fire_name
+                            "D" + str(day.day).zfill(2) + "_" + satellitecontainer.fire_name
                         )
-                        writedata.write(
-                            fire_satellitecontainer, fire_viirscontainer, fire_plumecontainer
-                        )
+                        writedata.write(satellitecontainer, viirscontainer, plumecontainer)
 
+                        # EMISSION ESTIMATION
                         # Later activate this flag to only save good plumes that are filtered
-                        if fire_plumecontainer.f_firearoundplume:
+                        if plumecontainer.f_firearoundplume:
                             # get injection ht
-                            fire_viirscontainer.insert(
+                            viirscontainer.insert(
                                 2,
                                 "injection_height",
                                 inj_ht.interpolate(
-                                    fire_viirscontainer.latitude.values,
-                                    fire_viirscontainer.longitude.values,
+                                    viirscontainer.latitude.values,
+                                    viirscontainer.longitude.values,
                                 ),
                             )
-                            if np.sum(fire_viirscontainer["injection_height"] > 0) > 1:
+                            if np.sum(viirscontainer["injection_height"] > 0) > 1:
                                 f_InjectionHeightExists = True
                             else:
+                                print("          Injection doesn't exists")
                                 f_InjectionHeightExists = False
                             # Append injection height
                             writedata.append_injection_ht(
                                 f_InjectionHeightExists,
-                                fire_viirscontainer["injection_height"].values,
+                                viirscontainer["injection_height"].values,
                             )
                             # compute emissions
                             if f_InjectionHeightExists:
@@ -144,9 +144,9 @@ def run(filename):
                                 fire_massfluxcontainer = compute_emissions(
                                     day,
                                     params,
-                                    fire_satellitecontainer,
-                                    fire_viirscontainer,
-                                    fire_plumecontainer,
+                                    satellitecontainer,
+                                    viirscontainer,
+                                    plumecontainer,
                                 )
                                 writedata.append_massflux(fire_massfluxcontainer)
             f_id += 1
