@@ -76,9 +76,8 @@ def watershed_segmentation(init_img, mask):
     for _id in ids:
         if _id != 0:
             mk1[j11:j12, j21:j22][(co_int_th == _id)[j11:j12, j21:j22]] = 1
-    markers[j11:j12, j21:j22][
-        ((init_img >= np.mean(init_img[mk1])) & (markers != 1))[j11:j12, j21:j22]
-    ] = 2
+            # markers[j11:j12, j21:j22][((init_img >= np.mean(init_img[mk1])) & (markers != 1))[j11:j12, j21:j22]] = 2
+    markers[((init_img >= np.mean(init_img[mk1])) & (markers != 1))] = 2
     seg_vars.__setattr__("marker_img", markers)
     # STEP 3: Segment image and label
     segment = watershed(highlight_edges, markers)
@@ -146,6 +145,7 @@ def get_segmented_plume(label_img, blocksize, latc, lonc, transform):
 
     This returns a flag and the label of the plume
     """
+    filt_dist = 25  # km in distance
     sh = label_img.shape
     i1 = sh[0] // 2 - blocksize
     i2 = sh[1] // 2 + blocksize + 1
@@ -170,18 +170,23 @@ def get_segmented_plume(label_img, blocksize, latc, lonc, transform):
             _nos[ii, 2] = _tmp
             ii += 1
     else:  # no labels in the ROI
+        print("      No enhancement found")
         return 0, False
     # If maximum number of points is small or the
     # max distance is less than 40 km then dump it
     # Select the one that has maximum numbers
     if _len > 1:
         _nmax = np.argmax(_nos[:, 1])
-        if (_nos[_nmax, 1].max() < 5) or (_nos[_nmax, 2] < 40):
+        # if (_nos[_nmax, 1].max() < 5) or (_nos[_nmax, 2] < filt_dist):
+        if _nos[_nmax, 2] < filt_dist:
+            print("      Short plumes")
             return 0, False
         else:
             return np.int_(_nos[_nmax, 0]), True
     elif _len == 1:
-        if (_nos[0, 1].max() < 5) or (_nos[0, 2] < 40):
+        # if (_nos[0, 1].max() < 5) or (_nos[0, 2] < filt_dist):
+        if _nos[0, 2] < filt_dist:
+            print("      Short plumes")
             return 0, False
         else:
             return np.int_(_nos[0, 0]), True
