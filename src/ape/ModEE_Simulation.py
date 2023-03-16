@@ -174,7 +174,7 @@ class Simulation3d(InitializeSim):
             # Append levels to release
             self.particles.append(_release)
 
-        print("Completed trajectory simulation")
+        print("       Completed trajectory simulation")
         # Map conc to tropomi pixels
         if self.param_traj2concflag:
             self.conc.to_tropomi(self.codata.avg_kernel)

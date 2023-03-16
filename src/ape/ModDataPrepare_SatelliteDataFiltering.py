@@ -139,6 +139,7 @@ def get_source_pixel(data, src):
     """
     # First get the nearest pixel
     px, flag = get_nearest_srcpixel(data.lat.data, data.lon.data, src)
+
     # If inside the orbit then get the exact location
     if flag:
         _flag = False
@@ -275,10 +276,11 @@ def extract_data(x, data, dta, nos=20):
             dta.__setattr__("f_good_satellite_data", True)
             dta.__setattr__("orbit", data.orbit)
             dta.__setattr__("orbit_filename", data.filename)
-
         else:
+            print("  Quality of data fails")
             dta.__setattr__("f_good_satellite_data", False)
     else:
+        print("  Data is just NANs")
         dta.__setattr__("f_good_satellite_data", False)
     return dta
 
@@ -316,8 +318,10 @@ def extract_and_filter_satellitedata(data, src):
             extracted_firedata = extract_data(pixel_loc, data, extracted_firedata)
             return extracted_firedata
         else:
+            print("  Grid sizes are large")
             extracted_firedata.__setattr__("f_good_satellite_data", False)
             return extracted_firedata
     else:
+        print("  Source not in the orbit")
         extracted_firedata.__setattr__("f_good_satellite_data", False)
         return extracted_firedata

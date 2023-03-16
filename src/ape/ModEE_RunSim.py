@@ -57,7 +57,9 @@ def compute_emissions(day, globalparams, fire_satdata, fire_viirs, plumecontaine
         get_varying_plume_height(massflux, particle_data)
         if massflux.f_particle_plume_alignment:
             emission_estimates_varying_ht(massflux, sim3d.flow)
-
+        else:
+            print("         Plume alignment fails")
     else:
+        print("          Background subtraction fails")
         massflux.f_particle_plume_alignment = False
     return massflux

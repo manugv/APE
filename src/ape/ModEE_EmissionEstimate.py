@@ -219,6 +219,8 @@ def get_varying_plume_height(massflux, particles):
 def emission_estimates_varying_ht(massflux, flow):
     # get height of the transaction lines
     _ed = min(20, len(massflux.tlines))
+    flag2 = 0
+    flag3 = 0
     for _ln in massflux.tlines[:_ed]:
         # If the difference between two sides is not high then continue
         if _ln.f_background_good and _ln.f_lineparticle_plume_alignment:
@@ -226,9 +228,13 @@ def emission_estimates_varying_ht(massflux, flow):
             fact_emis = _ln.final_co * 28.01 * 0.001 * _ln.ds
             # compute velocity at plume height from Lagrangian simulation
             flag1 = vel_and_emis(_ln, _ln.varying_plume_ht, flow, fact_emis, "lag")
+            flag2 += 1
+            flag3 += flag1
             _ln.__setattr__("f_veldiff_varinght", flag1)
             fl = vel_and_emis(_ln, _ln.varying_plume_ht_m500, flow, fact_emis, "lag_m500")
             fl = vel_and_emis(_ln, _ln.varying_plume_ht_p500, flow, fact_emis, "lag_p500")
+    if flag3 / flag2 < 0.5:
+        print("         Velocity < 2m/s")
 
 
 def emission_estimates_const_ht(massflux, flow):
