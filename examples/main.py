@@ -1,3 +1,3 @@
-from ape.ModuleRun import run
+from ape.ModuleRunFire import run_fire
 
 run("example.yaml")
