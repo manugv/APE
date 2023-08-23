@@ -41,8 +41,7 @@ def compute_emissions(day, globalparams, fire_satdata, fire_viirs, plumecontaine
         sim3d.run()
         simname = (
             globalparams.output_particlefile_prefix
-            + "_D"
-            + str(day.day).zfill(2)
+            + day.strftime("%Y_%m_%d")
             + "_"
             + fire_satdata.fire_name
         )

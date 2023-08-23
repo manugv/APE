@@ -18,6 +18,10 @@ class WriteData:
         self.plumedetectgrpname = "PlumeDetection"
         self.massflux = "Massflux"
 
+    def updatefilename(self, newname):
+        self.filename = newname + ".h5"
+
+        
     def get_group(self, r_grp, grpname):
         if grpname in r_grp.keys():
             return r_grp[grpname]
