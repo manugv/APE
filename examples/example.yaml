@@ -16,8 +16,8 @@ Fire:
   roi_name: 'AU'
   roi: [113, 154, -44, -10]  # [lon_min, lon_max, lat_min, lat_max]
   # Time
-  year: 2019
-  month: 10
+  startdate: 2019-10-1	# year-month-day
+  enddate: 2019-10-31
 
 Directories:
   # Satellite data directory
