@@ -39,6 +39,15 @@ def check_get_data(day, params):
     return o_flag, viirsdata, firesrcs
 
 
+def checkiforbitexists(satfiles, orbit):
+    info = orbit in satfiles.orbit.values
+    if info:
+        return info
+    else:
+        print("Orbit ", orbit, "  is not present")
+        return info
+
+
 def run_fire(filename):
     # Read input file
     params = InputParameters(filename)
@@ -51,8 +60,7 @@ def run_fire(filename):
     print("Satellite file read done")
 
     # Initialize a file to write data
-    writedata = WriteData(params.output_file)
-
+    writedata = WriteData(params.output_file_prefix)
     # Algorithm
     for day in params.days:
         print(day)
@@ -76,6 +84,10 @@ def run_fire(filename):
                 )
                 # Flag to say the data is read or not
                 if read_orbit != firesrcs.orbits[f_id]:
+                    info = checkiforbitexists(params.sat_files, firesrcs.orbits[f_id])
+                    if not info:
+                        f_id += 1
+                        continue
                     orbit_satdata = readsatellitedata(params, firesrcs.orbits[f_id])
 
                 # Extract satellite data based on fire source
@@ -111,6 +123,7 @@ def run_fire(filename):
                         viirscontainer = viirsdata.loc[viirsdata.labels == firesrcs.labels[f_id]]
                         # firecontainer.__setattr__("viirs_data", src_fire)
                         # Write data
+                        writedata.updatefilename(params.output_file + day.strftime("%Y_%m")
                         writedata.firegrpname = (
                             "D" + str(day.day).zfill(2) + "_" + satellitecontainer.fire_name
                         )
