@@ -9,6 +9,8 @@ Get vertical velocity and z-coordinates
 
 import pandas as pd
 import numpy as np
+from importlib.resources import files
+
 
 """
 k is used to denote levels in atmosphere
@@ -122,8 +124,8 @@ def get_geo_height(lvl, phf, Tv, geop_s):
 
 
 def get_vertical_coord_vel(data):
-    file3 = "table_lvl137.csv"
-    params_lvl = pd.read_csv(file3, index_col=0)
+    table_level137s = files("APE.data").joinpath("table_lvl137.csv")
+    params_lvl = pd.read_csv(table_level137s, index_col=0)
 
     # get factor that is used to compute R_m and T_v
     Rm, Tv = get_Rm_Tv(data["q"], data["t"])

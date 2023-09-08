@@ -9,11 +9,9 @@ Created on Fri Jun  3 14:13:13 2022
 """
 
 import numpy as np
-from pandas import DataFrame, read_csv, merge
+from pandas import DataFrame, read_csv
 from datetime import date
-
-flname = "orbits_loc_table.csv"
-df = read_csv(flname)
+from importlib.resources import files
 
 
 def tropomi_mjd2orbit(mjd, fit_par=None):
@@ -44,7 +42,6 @@ def tropomi_mjd2orbit(mjd, fit_par=None):
 
 def geoloc_in_orbit(lat0, lon0, orbit_nr):
     """
-
     Geolocation_in_orbit.
 
     The function tests if the geolocation lat0,lon0 is included in
@@ -53,7 +50,9 @@ def geoloc_in_orbit(lat0, lon0, orbit_nr):
     Output: True/False
 
     """
-    global df
+    table_orbits = files("APE.data").joinpath('orbits_loc_table.csv')
+    df = read_csv(table_orbits)
+
     # find the index of the nearest latitude to lat0
     idx = np.abs(df.lat.values - lat0).argmin()
 
@@ -121,7 +120,30 @@ def geolocation_orbitlist(lat0, lon0, start_orbit, stop_orbit):
     return result[(result >= start_orbit) & (result <= stop_orbit)]
 
 
-def get_orbits_on_locations(st_date, firesources):
+def checkiforbitexists(satfiles, orbit):
+    """Check if a orbit/orbits exist
+
+    Parameters
+    ----------
+    satfiles : Pandas Dataframe
+        Data frame containing Orbit values
+    orbit : Int or Array(Int)
+        Orbit numbers
+    """
+    allorb = np.array([], dtype=np.int_)
+    if isinstance(orbit, np.ndarray):
+        for orb in orbit:
+            if orb in satfiles.orbit.values:
+                allorb = np.append(allorb, orb)
+    elif isinstance(orbit, np.int_):
+        if orbit in satfiles.orbit.values:
+            allorb = np.append(allorb, orbit)
+    else:
+        print("Orbit is not an integer", orbit)
+    return allorb
+
+
+def get_orbits_on_locations(st_date, sources, sat_files):
     """
     Get all orbits for the identified sources based on time.
 
@@ -129,8 +151,8 @@ def get_orbits_on_locations(st_date, firesources):
     ----------
     st_date : date type
         Date on which the data needs to be read.
-    firesources : pandas Dataframe
-        Fire source is computed based on computed clusters.
+    sources : Numpy array (m,2)
+        Array with 'm' sources of latitude and longitude.
 
     Returns
     -------
@@ -150,29 +172,31 @@ def get_orbits_on_locations(st_date, firesources):
     l_orbs = np.array([], dtype=np.int_)
     lbl = np.array([], dtype=np.int_)
 
-    for i in range(len(firesources)):
+    # find the dimensions of the source arrray
+    if sources.ndim == 1:   # single source
+        sh = 1
+    elif sources.ndim > 1:   # multiple sources
+        sh = sources.shape[0]
+
+    for i in range(sh):
         # get all orbits is a certain range for a specified location
-        _orbits = geolocation_orbitlist(
-            firesources.latitude.values[i], firesources.longitude.values[i], st_orb, end_orb
-        )
-        # saves the orbits
-        l_orbs = np.concatenate((l_orbs, _orbits))
-        lbl = np.concatenate((lbl, np.ones(len(_orbits)) * i))
+        if sources.ndim == 1:
+            _orbits = geolocation_orbitlist(sources[0], sources[1], st_orb, end_orb)
+        else:
+            _orbits = geolocation_orbitlist(sources[i, 0], sources[i, 1], st_orb, end_orb)
+        # check if these orbits exist
+        _orbs = checkiforbitexists(sat_files, _orbits)
+
+        if _orbs.size != 0:
+            # saves the orbits
+            l_orbs = np.concatenate((l_orbs, _orbs))
+            lbl = np.concatenate((lbl, np.ones(len(_orbs)) * i))
+
+    # create a data frame and return
     _grp1 = DataFrame()
     _grp1["labels"] = lbl
     _grp1["orbits"] = l_orbs
-    _grp = merge(firesources, _grp1, on="labels")
-
-    _grp.sort_values(
-        by=["orbits", "frp"],
-        ascending=[True, False],
-        inplace=True,
-        ignore_index=True,
-    )
-    if len(_grp) > 0:
-        _grp["readflag"] = True
-        _flg = True
-        return _flg, _grp
+    if len(_grp1) > 0:
+        return True, _grp1
     else:
-        _flg = False
-        return _flg, _grp
+        return False, _grp1

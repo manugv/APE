@@ -11,20 +11,43 @@ Created on Wed Jun  8 16:11:59 2022.
 
 
 try:
-    import numpy as np
     from ModuleInitialParameters import InputParameters
     from ModDataPrepare_VIIRSData import get_firedata
     from ModDataPrepare_SatelliteIndentifyOrbits import get_orbits_on_locations
     from ModDataPrepare_SatelliteRead import readsatellitedata, get_filenames
     from ModDataPrepare_SatelliteDataFiltering import extract_and_filter_satellitedata
     from ModuleTransform import TransformCoords
-    from ModuleInjectionHeight import InjectionHeight
     from ModPlume_Detection import segment_image_plume
     from ModPlume_Filtering import filter_good_plumes
     from ModuleWrite import WriteData
-    from ModEE_RunSim import compute_emissions
 except ImportError:
     print("Module loading failed")
+
+
+def get_orbits(day, params):
+    """Get fire sources and orbits corresponding to those fire sources
+
+    Read fire data. Cluster fires and then get all orbits for each custer location
+
+    Parameters
+    ----------
+    day : Date (datetime)
+        Day on which the fire clusters need to be read
+    params : Class (InitialParameters)
+        Class containing all initialparameters.
+
+    Return
+    --------
+    Flag : Bool
+        If the function was successful.
+    viirsdata : Pandas Dataframe
+        All VIIRS data read from the csv file
+    firesrcs : Pandas Dataframe
+        Clustered fire sources and the orbits
+    """
+    o_flag, orb_lbls = get_orbits_on_locations(day, lat_lon, params.sat_files)
+    # if no orbits found then return false
+    return o_flag, orb_lbls
 
 
 def check_get_data(day, params):

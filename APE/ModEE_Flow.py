@@ -5,7 +5,7 @@ Created on Tue May 26 17:56:58 2020
 
 @author: manu
 """
-from ModEE_VerticalData import get_vertical_coord_vel
+from .ModEE_VerticalData import get_vertical_coord_vel
 from datetime import datetime, timedelta
 from netCDF4 import Dataset
 import numpy as np

@@ -9,8 +9,8 @@ Filter and extract the satellite data
 """
 import numpy as np
 from scipy.spatial import cKDTree
-from ModuleDataContainers import DataContainer
-from datetime import timedelta, datetime, timezone
+from .ModuleDataContainers import DataContainer
+from datetime import timedelta, datetime   # , timezone
 
 
 # Values to extract for each orbit DO NOT CHANGE THE SEQUENCE
@@ -210,7 +210,7 @@ def filter_good_data(co_mask, qa_value):
     # Flip the mask, so good values
     _co = ~co_mask
     nx = np.int_(_co.shape[0] / 2)
-    _inner = _co[nx - 3 : nx + 4, nx - 3 : nx + 4]
+    _inner = _co[nx - 3: nx + 4, nx - 3: nx + 4]
     # QA and other quality check
     if (_inner.sum() / _inner.size > 0.85) & (_co.sum() / _co.size > 0.8):
         print("    Good Data:-  ", _inner.sum() / _inner.size, _co.sum() / _co.size)
@@ -248,7 +248,7 @@ def extract_data(x, data, dta, nos=20):
     j1 = x[1] - nos
     j2 = x[1] + nos + 2
     # Check if all CO values are nans
-    co = data.co_column[i1 : i2 - 1, j1 : j2 - 1].filled(fill_value=np.nan)
+    co = data.co_column[i1: i2 - 1, j1: j2 - 1].filled(fill_value=np.nan)
     flag = np.logical_not(np.isnan(co).sum() == co.size)
     dta.__setattr__("f_not_all_nans", flag)
     # Get data
@@ -257,7 +257,7 @@ def extract_data(x, data, dta, nos=20):
         dta.__setattr__("orbit_ref_time", data.time)
         for i, fl in zip(val_ext, val_flag):
             if fl == 0:
-                _tmp = data.__getattribute__(i)[i1 : i2 - 1, j1 : j2 - 1]
+                _tmp = data.__getattribute__(i)[i1: i2 - 1, j1: j2 - 1]
                 dta.__setattr__(i, _tmp)
             elif fl == 2:
                 _tmp1 = data.__getattribute__(i)[i1:i2].data
@@ -286,8 +286,7 @@ def extract_data(x, data, dta, nos=20):
 
 
 def extract_and_filter_satellitedata(data, src):
-    """
-    Filter and extract data.
+    """Filter and extract data.
 
     Parameters
     ----------
@@ -303,7 +302,6 @@ def extract_and_filter_satellitedata(data, src):
     dat1 : Data container [dict]
         Data containing extracted data.
     """
-
     extracted_firedata = DataContainer()
     # Get pixel containing the fire source
     inorb_flag, loc_flag, pixel_loc = get_source_pixel(data, src)

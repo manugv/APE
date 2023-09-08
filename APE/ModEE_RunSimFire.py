@@ -6,15 +6,15 @@ Created on Wed Jun  8 16:11:59 2022.
 @author: Manu Goudar
 """
 
-from ModEE_Simulation import Simulation3d
-from ModEE_EmissionEstimate import (
+from .ModEE_Simulation import Simulation3d
+from .ModEE_EmissionEstimate import (
     create_tlines_remove_background,
     get_constant_plume_height,
     get_varying_plume_height,
     emission_estimates_varying_ht,
     emission_estimates_const_ht,
 )
-from ModuleTransform import TransformCoords
+from .ModuleTransform import TransformCoords
 
 
 def compute_emissions(day, globalparams, fire_satdata, fire_viirs, plumecontainer):
@@ -22,22 +22,14 @@ def compute_emissions(day, globalparams, fire_satdata, fire_viirs, plumecontaine
     transform = TransformCoords(fire_satdata.source)
 
     # Create transaction lines and remove background
-    massflux = create_tlines_remove_background(
-        fire_satdata,
-        fire_viirs,
-        plumecontainer,
-        transform,
-    )
+    
+    massflux = create_tlines_remove_background(fire_satdata, plumecontainer, transform)
+
     # IF the plume was good after background subtraction
     # then compute the lagrangian simulations and extract height
     if massflux.f_good_plume_bs:
-        sim3d = Simulation3d(
-            fire_satdata.source,
-            transform,
-            globalparams,
-            fire_viirs,
-            fire_satdata.measurement_time,
-        )
+        sim3d = Simulation3d(fire_satdata.source, transform, globalparams,
+                             fire_viirs, fire_satdata.measurement_time)
         sim3d.run()
         simname = (
             globalparams.output_particlefile_prefix

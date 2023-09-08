@@ -7,7 +7,7 @@ Convert trajectory to concentrations in 3d
 """
 
 import numpy as np
-from ModEE_GridMapping import GridMapping
+from .ModEE_GridMapping import GridMapping
 
 
 class Traj2Conc:

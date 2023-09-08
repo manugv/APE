@@ -12,7 +12,7 @@ import h5py
 from netCDF4 import Dataset
 import numpy as np
 import pandas as pd
-from scipy import interpolate
+# from scipy import interpolate
 
 from scipy.interpolate import NearestNDInterpolator as n_int
 from scipy.interpolate import RegularGridInterpolator as RGI
@@ -24,7 +24,8 @@ from scipy.signal import argrelmin
 from shapely.geometry import LineString
 from skimage.morphology import skeletonize
 
-import ModuleRefineGrids as mod_refine
+import .ModuleRefineGrids as mod_refine
+
 
 ##################################################################
 # General Functions
@@ -268,8 +269,8 @@ class TransactionLine:
         pl_lat = np.array([self.pre_origin[0], en_lt])
         pl_lon = np.array([self.pre_origin[1], en_ln])
         __xy, __latlon = self.get_pts(pl_lat, pl_lon)
-        self.pre_coords_xy[self.nos + 1 :] = __xy
-        self.pre_coords_deg[self.nos + 1 :] = __latlon
+        self.pre_coords_xy[self.nos + 1:] = __xy
+        self.pre_coords_deg[self.nos + 1:] = __latlon
         # convert mts to kms
         self.pre_coords_xy /= 1000
 
@@ -397,7 +398,7 @@ def get_tlines(plume, co_column, sat_xkm, sat_ykm, trans, nos, spacing=500):
         )
         # compute pre_co
         pre_co = interp.interpolate(_ln.pre_coords_xy)
-        if np.sum(np.isnan(pre_co[nos - 10 : nos + 10])) > 10:
+        if np.sum(np.isnan(pre_co[nos - 10: nos + 10])) > 10:
             continue
         else:
             ydata = interp.check_nan_interpolate(_ln.pre_coords_xy.copy())
@@ -406,10 +407,10 @@ def get_tlines(plume, co_column, sat_xkm, sat_ykm, trans, nos, spacing=500):
             _ln.__setattr__("origin", _ln.pre_coords_deg[c_id])
             _ln.__setattr__("pre_co", pre_co)
             _ln.__setattr__("pre_co_int", ydata)
-            _ln.__setattr__("co", ydata[idx[0] : idx[1]])
-            _ln.__setattr__("line_dist", xdata[idx[0] : idx[1]] - xdata[c_id])
-            _ln.__setattr__("coords_deg", _ln.pre_coords_deg[idx[0] : idx[1]])
-            _ln.__setattr__("coords_xy", _ln.pre_coords_xy[idx[0] : idx[1]])
+            _ln.__setattr__("co", ydata[idx[0]: idx[1]])
+            _ln.__setattr__("line_dist", xdata[idx[0]: idx[1]] - xdata[c_id])
+            _ln.__setattr__("coords_deg", _ln.pre_coords_deg[idx[0]: idx[1]])
+            _ln.__setattr__("coords_xy", _ln.pre_coords_xy[idx[0]: idx[1]])
             # Remove background and create new variables
             remove_background(_ln)
             if _ln.f_background_good:
@@ -441,7 +442,7 @@ def emission_indices(x, y):
     else:
         i2 = len(y)
     _idx = np.zeros_like(y, dtype=np.bool_)
-    _idx[i1 + 1 : i2] = True
+    _idx[i1 + 1: i2] = True
     return _idx
 
 

@@ -6,18 +6,10 @@ Created on Wed Jun  8 16:11:59 2022.
 @author: Manu Goudar
 """
 
-
-from ModEE_MassFlux import (
-    compute_medial_line,
-    get_plumepoints_slope,
-    get_tlines,
-    remove_background,
-    particles_height_at_tlines,
-    emission_indices,
-)
-from ModuleInjectionHeight import InjectionHeight
+from .ModEE_MassFlux import (compute_medial_line,  get_plumepoints_slope,
+                             get_tlines, particles_height_at_tlines)
 import functions as func
-from ModuleDataContainers import DataContainer
+from .ModuleDataContainers import DataContainer
 import numpy as np
 
 
@@ -89,7 +81,7 @@ def vel_and_emis(_ln, plume_ht, flow, fact_emis, suffix=""):
     return flag
 
 
-def create_tlines_remove_background(satellitedata, viirsdata, plumecontainer, transform):
+def create_tlines_remove_background(satellitedata, plumecontainer, transform):
     """_summary_
 
     Args:
@@ -99,8 +91,6 @@ def create_tlines_remove_background(satellitedata, viirsdata, plumecontainer, tr
         particles (_type_): _description_
         flow (_type_): _description_
     """
-    _height = viirsdata.injection_height.values
-    inj_height = np.mean(_height[_height > 0])
 
     massflux = DataContainer()
 

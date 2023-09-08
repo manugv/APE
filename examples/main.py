@@ -1,3 +1,3 @@
-from ape.ModuleRunFire import run_fire
+from ModuleRunFire import run_fire
 
-run("example.yaml")
+run("/data/manugv/github/ape.yaml")

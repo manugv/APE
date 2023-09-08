@@ -65,7 +65,7 @@ def read_firedata(init_params, st_date):
 
     """
     _file = init_params.viirsdir + st_date.strftime("%Y-%m-%d") + ".csv"
-    print(_file)
+    # print(_file)
     # Check if the file is present in the given directory
     if (Path(_file)).is_file():
         # read VIIRS data
@@ -176,13 +176,17 @@ def get_firedata(day, params):
         Dataframe containing clustered data.
 
     """
-    flagdata, viirsdata = read_firedata(params, day)
-    if flagdata:
+    flag_dataexists, viirsdata = read_firedata(params, day)
+    firesources = []
+
+    if flag_dataexists:
         viirsdata, firesources = get_clusterdata(viirsdata)
         if len(firesources) > 0:
-            return flagdata, True, viirsdata, firesources
+            flag_firesclustered = True
+            return flag_dataexists, flag_firesclustered, viirsdata, firesources
         else:
-            return flagdata, False, viirsdata, []
+            flag_firesclustered = False
+            return flag_dataexists, flag_firesclustered, viirsdata, firesources
     else:
-        print("Data not there")
-        return flagdata, False, [], []
+        print("File does not exist")
+        return flag_dataexists, False, viirsdata, []

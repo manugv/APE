@@ -10,8 +10,8 @@ from netCDF4 import Dataset  # type: ignore
 import numpy as np
 import pathlib
 from pandas import DataFrame
-from ModDataPrepare_Destriping import calc_stripe_mask
-from ModuleDataContainers import DataContainer
+from .ModDataPrepare_Destriping import calc_stripe_mask
+from .ModuleDataContainers import DataContainer
 
 
 # data that needs to be extracted [DO NOT CHANGE THE VARIABLE NAMES]

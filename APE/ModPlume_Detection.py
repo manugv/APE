@@ -13,7 +13,7 @@ from skimage.segmentation import watershed
 
 # from skimage.morphology import medial_axis
 from skimage.measure import label
-from ModuleDataContainers import DataContainer
+from .ModuleDataContainers import DataContainer
 
 
 def watershed_segmentation(init_img, mask):
@@ -192,7 +192,7 @@ def get_segmented_plume(label_img, blocksize, latc, lonc, transform):
             return np.int_(_nos[0, 0]), True
 
 
-def segment_image_plume(data, transform, blocksize=1):
+def segment_image_plume(_lat, _lon, co_orig, mask, transform, blocksize=1):
     """
     Segments the input image using watershed algorithm.
 
@@ -215,18 +215,9 @@ def segment_image_plume(data, transform, blocksize=1):
         Contains the intermediate data and the detected plume.
 
     """
-    _lat = data.lat
-    _lon = data.lon
-    co_orig = data.co_column_corr
-    mask = data.co_qa_mask
-
     # Interpolate nan values for plume detection
     idx = np.isnan(co_orig)
-    intp = lint(
-        (data.lat[~idx].ravel(), data.lon[~idx].ravel()),
-        data.co_column_corr[~idx].ravel(),
-        fill_value=0,
-    )
+    intp = lint((_lat[~idx].ravel(), _lon[~idx].ravel()), co_orig[~idx].ravel(), fill_value=0)
     co_int = intp(_lat, _lon)
 
     # smoothen the image by gaussian

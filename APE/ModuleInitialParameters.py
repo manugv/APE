@@ -9,12 +9,12 @@ Parameter Containers for different variables
 try:
     from numpy import array
     from yaml import load, FullLoader
-    from datetime import datetime, timedelta
-    from ModuleDataContainers import Flowinfo, SimulationTime, Dispersion
-    from ModuleDataContainers import ParticleSplitting, MultipleParticleRelease
-    from ModuleDataContainers import Traj2ConcInfo
-    from ModEE_CreateSources import SourcesInit
-    from ModuleTransform import TransformCoords
+    from datetime import datetime, timedelta, date
+    from .ModuleDataContainers import Flowinfo, SimulationTime, Dispersion
+    from .ModuleDataContainers import ParticleSplitting, MultipleParticleRelease
+    from .ModuleDataContainers import Traj2ConcInfo
+    from .ModEE_CreateSources import SourcesInit
+    from .ModuleTransform import TransformCoords
 except ImportError:
     print("Module loading failed while initializing parameters")
 
@@ -30,6 +30,7 @@ class InputParameters:
             fl = open(filename)
         except FileNotFoundError:
             print("{filename} does not exist")
+            return None
 
         # load yaml using load
         _f = load(fl, FullLoader)
@@ -77,8 +78,16 @@ class InputParameters:
         days : date
            Contains all days in date format
         """
-        self.startdate = datetime.strptime(_date["startdate"], "%Y-%m-%d").date()
-        self.enddate = datetime.strptime(_date["enddate"], "%Y-%m-%d").date()
+        # define start date
+        if isinstance(_date["startdate"], (date, datetime)):
+            self.startdate = _date["startdate"]
+        else:
+            self.startdate = datetime.strptime(_date["startdate"], "%Y-%m-%d").date()
+        # define end date
+        if isinstance(_date["enddate"], (date, datetime)):
+            self.enddate = _date["enddate"]
+        else:
+            self.enddate = datetime.strptime(_date["enddate"], "%Y-%m-%d").date()
         if self.startdate > self.enddate:
             print("Start date is smaller then end date")
             exit()
@@ -121,7 +130,7 @@ class InputParameters:
             Dict containing data
 
         """
-        self.ind_source = _ind["Source"]
+        self.ind_source = array(_ind["Source"])
         self.ind_source_name = _ind["Source_name"]
         # date specification
         self.days = self.get_days(_ind)
