@@ -140,11 +140,6 @@ def get_segmented_plume(label_img, blocksize, latc, lonc, transform):
         If plume is present of absent.
 
     """
-    """
-    This checks if plume is present and returns label with flag
-
-    This returns a flag and the label of the plume
-    """
     filt_dist = 25  # km in distance
     sh = label_img.shape
     i1 = sh[0] // 2 - blocksize

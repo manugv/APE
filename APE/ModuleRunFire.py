@@ -12,8 +12,7 @@ Created on Wed Jun  8 16:11:59 2022.
 
 try:
     import numpy as np
-    import pandas as pd
-    from pandas import merge
+    from pandas import merge, read_csv
     from .ModuleInitialParameters import InputParameters
     from .ModuleDataContainers import DataContainer
     from .ModDataPrepare_VIIRSData import get_firedata
@@ -32,7 +31,7 @@ except ImportError:
 
 
 def getsatelliteorbitsatfiresrcs(day, params, firesrcs):
-    """Get fire sources and orbits corresponding to those fire sources
+    """Get fire sources and orbits corresponding to those fire sources.
 
     Read fire data. Cluster fires and then get all orbits for each custer location
 
@@ -67,7 +66,7 @@ def getsatelliteorbitsatfiresrcs(day, params, firesrcs):
 
 
 def satellitedataoveranorbit(orbitdata, orbittoread, params):
-    """Get Satellite data
+    """Get Satellite data.
 
     Check if the exist satellite data orbit is same as given orbit
     if it's not then read new orbit into it
@@ -83,6 +82,7 @@ def satellitedataoveranorbit(orbitdata, orbittoread, params):
 
     Examples
     --------
+    
     """
     if orbitdata.orbit != orbittoread:
         orbitdata = readsatellitedata(params, orbittoread)
@@ -132,7 +132,7 @@ def fireape_plumedetection(satcont, firesrcs, viirsdata):
 
 
 def fireape_injectionheight(viirscontainer, inj_ht, writedata):
-    """Injection height
+    """Injection height.
 
     Check for injection height and write data
 
@@ -145,11 +145,13 @@ def fireape_injectionheight(viirscontainer, inj_ht, writedata):
     writedata : Class
         Class containing methods to write data
 
-    Examples
+    Return
     --------
+    flag_injht: Bool
 
     """
     # Later activate this flag to only save good plumes that are filtered
+    flag_injht = True
     # get injection ht
     injheight = inj_ht.interpolate(viirscontainer.latitude.values, viirscontainer.longitude.values)
     viirscontainer.insert(2, "injection_height", injheight)
@@ -158,14 +160,12 @@ def fireape_injectionheight(viirscontainer, inj_ht, writedata):
         print("          Injection doesn't exists")
         # append injection height
         flag_injht = False
-    else:
-        flag_injht = True
     writedata.append_injection_ht(flag_injht, injheight)
     return flag_injht
 
 
 def saveplumedetectiondata(params, day, satdata, viirsdata, plumedata, writedata):
-    """Save parameters after plume detection
+    """Save parameters after plume detection.
 
     Write data to a file
 
@@ -184,9 +184,9 @@ def saveplumedetectiondata(params, day, satdata, viirsdata, plumedata, writedata
     writedata : Class
         Class containing methods to write data
 
-    Examples
+    Return
     --------
-
+    None
     """
     writedata.updatefilename(params.output_file + day.strftime("%Y_%m"))
     writedata.firegrpname = ("D" + str(day.day).zfill(2) + "_" + satdata.fire_name)
@@ -194,7 +194,7 @@ def saveplumedetectiondata(params, day, satdata, viirsdata, plumedata, writedata
 
 
 def datapreparationandplumedetection(day, params, writedata):
-    """Macro function using APE Data processing and Plume detection stage for fires
+    """Macro function using APE Data processing and Plume detection stage for fires.
 
     Wrappers on APE functions for fires from VIIRS dataset
 
@@ -274,7 +274,7 @@ def cluster_downloaddata(day):
 # and the files have to be identified based on that
 def getclusterid(filedir, key):
     filename = filedir + "/" + (filedir[-10:]).replace("/", "-") + "_cluster_table.csv"
-    df = pd.read_csv(filename)
+    df = read_csv(filename)
     return ((df[[key in fire for fire in df.fires]]).filename.values[0]).split("_")[-1]
 
 

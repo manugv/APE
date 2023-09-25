@@ -160,20 +160,20 @@ def recompute_qavalues(z_cloud, solar_za, aerosol_thickness):
     return np.ma.array(qa)
 
 
-def get_qa_values(orbit, version, _val, f):
+def get_qa_values(f, key_field, orbit, version=20000):
     """
-    If needed, recompute qa values for old orbits and versions.
+    Recompute qa values for orbits and version less than 2818 and 10202.
 
     Parameters
     ----------
+    f : File identifier
+    File pointer to read data.
+    key_field : str
+        Field "qa_value"
     orbit : Int
         Orbit number.
     version : Int
         TROPOMI Processing version.
-    _val : str
-        field name in satellite file.
-    f : File identifier
-        File pointer to read data.
 
     Returns
     -------
@@ -188,7 +188,7 @@ def get_qa_values(orbit, version, _val, f):
         qa_val = recompute_qavalues(_tmp["z_cloud"], _tmp["solar_za"], _tmp["aerosol_thickness"])
         del _tmp
     else:
-        qa_val = f[_val][0]
+        qa_val = f[key_field][0]
     return qa_val
 
 
@@ -230,7 +230,7 @@ def get_co_column(orbit, version, _val, f, qa_value):
     return codata, co_fft
 
 
-def readsatellitedata(params, orbit):
+def readsatellitedata(filename, orbit, version):
     """
     Read TROPOMI Orbit data.
 
@@ -248,10 +248,6 @@ def readsatellitedata(params, orbit):
         Contains data of the satellite for a given Orbit number.
 
     """
-    # get file name and version based on orbit
-    orbitinfo = params.sat_files[params.sat_files.orbit == orbit]
-    version = orbitinfo.version.values[0]
-    filename = orbitinfo.filename.values[0]
     # Read data
     data = DataContainer()
     data.__setattr__("filename", filename)

@@ -12,7 +12,8 @@ from scipy.interpolate import RegularGridInterpolator as RGI
 
 def get_interpolation_func_2d(flow, time):
     """
-    Based on time update interpolation functions
+    Based on time update interpolation functions.
+    
     They are initialized at time 0
     Time in hours and is an integer
     """
@@ -24,9 +25,12 @@ def get_interpolation_func_2d(flow, time):
 # =============================================================================
 #
 # =============================================================================
+
 class Regular_2d_Interpolate:
     """
-    This algorithm computes interpolation based on 2d regular grid (xy)
+    Algorithm computes interpolation based on 2d regular grid (xy).
+
+    New test
     """
 
     def __init__(self, lat, lon):
