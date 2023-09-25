@@ -173,9 +173,9 @@ def get_orbits_on_locations(st_date, sources, sat_files):
     lbl = np.array([], dtype=np.int_)
 
     # find the dimensions of the source arrray
-    if sources.ndim == 1:   # single source
-        sh = 1
-    elif sources.ndim > 1:   # multiple sources
+    # single source
+    sh = 1   # if sources.ndim == 1
+    if sources.ndim > 1:   # multiple sources
         sh = sources.shape[0]
 
     for i in range(sh):
@@ -187,7 +187,7 @@ def get_orbits_on_locations(st_date, sources, sat_files):
         # check if these orbits exist
         _orbs = checkiforbitexists(sat_files, _orbits)
 
-        if _orbs.size != 0:
+        if np.size(_orbs) != 0:
             # saves the orbits
             l_orbs = np.concatenate((l_orbs, _orbs))
             lbl = np.concatenate((lbl, np.ones(len(_orbs)) * i))

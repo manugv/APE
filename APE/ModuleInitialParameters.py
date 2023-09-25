@@ -15,15 +15,12 @@ try:
     from .ModuleDataContainers import Traj2ConcInfo
     from .ModEE_CreateSources import SourcesInit
     from .ModuleTransform import TransformCoords
+    from .ModDataPrepare_SatelliteRead import get_filenames
 except ImportError:
     print("Module loading failed while initializing parameters")
 
 
 class InputParameters:
-    """
-    Read yaml file and initialize parameters
-    """
-
     def __init__(self, filename):
         # open file
         try:
@@ -47,6 +44,9 @@ class InputParameters:
         self.output_file_prefix = self.output_dir + self.o_filename
         self.output_particles_dir = _dirs["output_particles_dir"]
         self.output_particlefile_prefix = self.output_particles_dir + self.o_filename
+        # Get all satellite files in the folder and orbits
+        self.sat_files = get_filenames(self.satellite_dir))
+
         # Flow
         self.param_flowinfo = Flowinfo(_f["Flow"])
         # Simulation time

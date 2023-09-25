@@ -219,7 +219,7 @@ def filter_good_data(co_mask, qa_value):
         return False, []
 
 
-def extract_data(x, data, dta, nos=20):
+def _extractgranule(x, data, dta, nos=20):
     """
     Check for nan and extract data.
 
@@ -302,24 +302,24 @@ def extract_and_filter_satellitedata(data, src):
     dat1 : Data container [dict]
         Data containing extracted data.
     """
-    extracted_firedata = DataContainer()
+    extracteddata = DataContainer()
     # Get pixel containing the fire source
     inorb_flag, loc_flag, pixel_loc = get_source_pixel(data, src)
-    extracted_firedata.__setattr__("source", src)
-    extracted_firedata.__setattr__("f_source_in_orbit", loc_flag)
+    extracteddata.__setattr__("source", src)
+    extracteddata.__setattr__("f_source_in_orbit", loc_flag)
     # extracted_firedata.__setattr__("f_source_pixel_loc", )
     # Filter based on grid size
-    if extracted_firedata.f_source_in_orbit:
-        extracted_firedata.__setattr__("f_filter_gridsize", filter_grid_size(pixel_loc[1]))
+    if extracteddata.f_source_in_orbit:
+        extracteddata.__setattr__("f_filter_gridsize", filter_grid_size(pixel_loc[1]))
         # Extract the data
-        if extracted_firedata.f_filter_gridsize:
-            extracted_firedata = extract_data(pixel_loc, data, extracted_firedata)
-            return extracted_firedata
+        if extracteddata.f_filter_gridsize:
+            extracteddata = _extractgranule(pixel_loc, data, extracteddata)
+            return extracteddata
         else:
             print("  Grid sizes are large")
-            extracted_firedata.__setattr__("f_good_satellite_data", False)
-            return extracted_firedata
+            extracteddata.__setattr__("f_good_satellite_data", False)
+            return extracteddata
     else:
         print("  Source not in the orbit")
-        extracted_firedata.__setattr__("f_good_satellite_data", False)
-        return extracted_firedata
+        extracteddata.__setattr__("f_good_satellite_data", False)
+        return extracteddata
