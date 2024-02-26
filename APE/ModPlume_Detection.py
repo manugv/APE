@@ -225,7 +225,7 @@ def segment_image_plume(_lat, _lon, co_orig, mask, transform, blocksize=1):
     label_id, flag = get_segmented_plume(seg_vars.labeled_img, blocksize, _lat, _lon, transform)
 
     seg_vars.__setattr__("label_id", label_id)
-    seg_vars.__setattr__("f_plumedetect", flag)
+    seg_vars.__setattr__("flag_plumedetected", flag)
     if flag:
         # get mask
         plumemask = seg_vars.labeled_img == label_id

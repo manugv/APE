@@ -6,15 +6,16 @@ Sepup class for 3d
 @author: Manu Goudar
 """
 
-from ModEE_Flow import FlowData
-from ModEE_Trajectory2Concentration import Traj2Conc
+from .ModEE_Flow import FlowData
+from .ModEE_Trajectory2Concentration import Traj2Conc
+from .ModEE_CreateSources import InitializeSource
 from scipy.interpolate import RegularGridInterpolator as RGI
 import numpy as np
 from copy import copy
 
 
 class InitializeSim:
-    def __init__(self, src, transform, param, firedata, firetime):
+    def __init__(self, origin_src, transform, param, sources, measurement_time):
         # Simulation type
         self.simtype = copy(param.param_disp.simtype)
         # Define simulation parameters
@@ -22,16 +23,14 @@ class InitializeSim:
         self.sim_time_sec = copy(param.param_simtime.sim_time_sec)
         self.save_dt = copy(param.param_simtime.savedt)
         # create simulation time
-        self.start_time = param.param_simtime.set_start_time(firetime)
+        self.start_time = param.param_simtime.set_start_time(measurement_time)
 
         # Create Transform
-        self.origin = src
+        self.origin = origin_src
         self.transform = transform
 
         # Read velocity data
-        self.flow = FlowData(
-            param.param_flowinfo, param.param_disp, self.start_time, self.sim_time_sec
-        )
+        self.flow = FlowData(param.flow, param.param_disp, self.start_time, self.sim_time_sec)
 
         # Initialize the class to get surface topology
         self.topology = SurfaceTopology(self.flow.lat, self.flow.lon, self.flow.z[0, :, :, 0])
@@ -39,9 +38,7 @@ class InitializeSim:
         # create fire sources for a fire
         # Define actual height of sources
         if self.simtype == "3d":
-            self.param_source = param.param_source.initialize_fire_src(
-                firedata.latitude, firedata.longitude, firedata.injection_height, self.topology
-            )
+            self.param_source = InitializeSource(sources, self.topology, param.plumeheightfromsurface)
 
         # Particles splitting
         self.particlesplit = param.param_partsplit.split

@@ -9,6 +9,7 @@ import numpy as np
 from pandas import read_csv, DataFrame, concat
 
 
+# TODO : to be removed
 class SourcesInit:
     def __init__(self, _keymain, _grp_src=[]):
         self.nos = 0
@@ -104,11 +105,11 @@ class SourcesInit:
             vids = np.arange(kk, dtype=np.int32)
             for i in range(xx.size):
                 for j in range(yy.size):
-                    self.locs[ll : ll + kk, 0] = xx[i]
-                    self.locs[ll : ll + kk, 1] = yy[j]
-                    self.locs[ll : ll + kk, 2] = zz[:]
-                    self.ids[ll : ll + kk, 1] = vids
-                    self.ids[ll : ll + kk, 0] = src_no
+                    self.locs[ll: ll + kk, 0] = xx[i]
+                    self.locs[ll: ll + kk, 1] = yy[j]
+                    self.locs[ll: ll + kk, 2] = zz[:]
+                    self.ids[ll: ll + kk, 1] = vids
+                    self.ids[ll: ll + kk, 0] = src_no
                     ll += kk
             nums = _no[0] * _no[1] * _no[2]
             i2 = i1 + nums
@@ -213,16 +214,16 @@ class SourcesInit:
         nos = locs.shape[0]
         return nos, locs, mass, ids
 
-    def initialize_fire_src(self, lat, lon, z, topology):
-        return InitializeFireSource(lat, lon, z, self.topo_flag, topology)
+    # def initialize_fire_src(self, lat, lon, z, topology):
+    #     return InitializeFireSource(lat, lon, z, self.topo_flag, topology)
 
 
-class InitializeFireSource:
-    def __init__(self, lat, lon, z, topo_flag, topology):
-        self.topo_flag = topo_flag
-        df0 = self.get_locations_fromarray(lat, lon, z, shift=-500)
-        df1 = self.get_locations_fromarray(lat, lon, z, shift=0)
-        df2 = self.get_locations_fromarray(lat, lon, z, shift=500)
+class InitializeSource:
+    def __init__(self, srcs, topology, heightfromsurface):
+        self.topo_flag = heightfromsurface
+        df0 = self.get_locations_fromarray(srcs[0], srcs[1], srcs[2], shift=-500)
+        df1 = self.get_locations_fromarray(srcs[0], srcs[1], srcs[2], shift=0)
+        df2 = self.get_locations_fromarray(srcs[0], srcs[1], srcs[2], shift=500)
         df = concat((df0, df1, df2))
         self.nos = len(df)
         self.locs = df[["lat", "lon", "z"]].values

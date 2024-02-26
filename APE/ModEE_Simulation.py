@@ -8,17 +8,17 @@ Simulation class for 3d
 
 import numpy as np
 import pandas as pd
-from ModEE_Setup import InitializeSim
-
-# from ModuleInterpolation import Interpolate_3d
-from ModEE_ParticleLevelContainer import LevelData
-import ModEE_SaveSimulation as mss
-import functions as func
-
+from .ModEE_Setup import InitializeSim
+from .ModEE_ParticleLevelContainer import LevelData
+from .ModEE_SaveSimulation import save_concentrationdata
+try:
+    from .functions import get_velocity
+except ImportError:
+    print("Cython function is not compiled well")
 
 class Simulation3d(InitializeSim):
-    def __init__(self, src, transform, param, firedata, firetime):
-        super().__init__(src, transform, param, firedata, firetime)
+    def __init__(self, src, transform, param, sources, firetime):
+        super().__init__(src, transform, param, sources, firetime)
         # initialize levels (splitting of particles) and particles
         self.all_levels = []
         self.particles = []
@@ -74,7 +74,7 @@ class Simulation3d(InitializeSim):
             idx, time_fact, _ifo = self.get_interp_id(particles.start_time + itr_time)
 
             # Temporal and spatial interpolation
-            vel[:, :], particles.limits[:] = func.get_velocity(
+            vel[:, :], particles.limits[:] = get_velocity(
                 x,
                 self.flow.lat,
                 self.flow.lon,
@@ -84,7 +84,7 @@ class Simulation3d(InitializeSim):
                 self.flow.w[idx, :, :, :],
             )
             if _ifo:
-                _v1[:, :], particles.limits[:] = func.get_velocity(
+                _v1[:, :], particles.limits[:] = get_velocity(
                     x,
                     self.flow.lat,
                     self.flow.lon,
@@ -131,8 +131,8 @@ class Simulation3d(InitializeSim):
             levels, lvl_times = self.__get_levels(self.run_time_sec)
             self.all_levels.append([levels, lvl_times, self.run_time_sec])
             # check if concentrations needs to be computed decide
-            if self.param_traj2concflag is True:
-                info_conc = self.conc.init_id(self.run_time_sec)
+            # if self.param_traj2concflag is True:
+            #     info_conc = self.conc.init_id(self.run_time_sec)
             # print("Release and time in secs:", rls, "  and  ", self.run_time_sec, "sec")
             # Compute particle trajectory over each level
             for lvl in zip(levels, lvl_times):
@@ -140,17 +140,8 @@ class Simulation3d(InitializeSim):
                 if sum(flag_lims) <= 0:
                     break
                 # initialize a level
-                p = LevelData(
-                    lvl,
-                    source_loc,
-                    mass,
-                    self.sim_dt,
-                    self.save_dt,
-                    self.run_time_sec,
-                    self.particles_nos,
-                    ids,
-                    flag_lims,
-                )
+                p = LevelData(lvl, source_loc, mass, self.sim_dt, self.save_dt,
+                              self.run_time_sec, self.particles_nos, ids, flag_lims)
 
                 # Update number of particles
                 self.particles_nos = p.ids[-1, 0]
@@ -204,7 +195,7 @@ class Simulation3d(InitializeSim):
             tf = None
 
         if self.param_traj2concflag is True:
-            mss.save_concentrationdata(
+            save_concentrationdata(
                 self.particles,
                 self.conc,
                 scale=scale,
@@ -213,7 +204,7 @@ class Simulation3d(InitializeSim):
                 simulationname=simname,
             )
         else:
-            mss.save_concentrationdata(
+            save_concentrationdata(
                 self.particles,
                 simulationname=simname,
                 scale=scale,

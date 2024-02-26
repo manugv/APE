@@ -5,19 +5,19 @@ Save Simulation function
 @author: Manu Goudar
 """
 
-from turtle import shape
 import h5py
 import numpy as np
-import ModEE_Xdmf as mx
+from .ModEE_Xdmf import creategrid, createtopology, createdataitem, creategeometry
+from .ModEE_Xdmf import createreference, createattribute, createtimevalue
 
 
 # XDMF FORMAT
 # WRITE XDMF FILE
 def __create_topo_geo(domain, topo_name, geo_name, mesh, dims, root_loc):
-    mx.createtopology(domain, topo_name, mesh, dims)
+    createtopology(domain, topo_name, mesh, dims)
     # Create geometry
-    geo = mx.creategeometry(domain, geo_name, "X_Y_Z")
-    mx.createdataitem(
+    geo = creategeometry(domain, geo_name, "X_Y_Z")
+    createdataitem(
         geo,
         Name="X",
         Dimensions=dims,
@@ -26,7 +26,7 @@ def __create_topo_geo(domain, topo_name, geo_name, mesh, dims, root_loc):
         Format="HDF",
         datafile=root_loc + "X",
     )
-    mx.createdataitem(
+    createdataitem(
         geo,
         Name="Y",
         Dimensions=dims,
@@ -35,7 +35,7 @@ def __create_topo_geo(domain, topo_name, geo_name, mesh, dims, root_loc):
         Format="HDF",
         datafile=root_loc + "Y",
     )
-    mx.createdataitem(
+    createdataitem(
         geo,
         Name="Z",
         Dimensions=dims,
@@ -57,19 +57,19 @@ def __create_timecollection(
     geometry_ref,
     attr_name,
 ):
-    timegrid = mx.creategrid(
+    timegrid = creategrid(
         domain, Name=grid_name, GridType="Collection", CollectionType="Temporal"
     )
     # time loop of grids
     for i in range(blocks):
-        timestep = mx.creategrid(
+        timestep = creategrid(
             timegrid, Name="t_" + str(i), GridType="Uniform", CollectionType=None
         )
-        mx.createtimevalue(timestep, str(time[i]))
-        mx.createreference(timestep, "Topology", topology_ref)
-        mx.createreference(timestep, "Geometry", geometry_ref)
-        attr = mx.createattribute(timestep, Name=attr_name, att_type="Scalar", center="Cell")
-        mx.createdataitem(
+        createtimevalue(timestep, str(time[i]))
+        createreference(timestep, "Topology", topology_ref)
+        createreference(timestep, "Geometry", geometry_ref)
+        attr = createattribute(timestep, Name=attr_name, att_type="Scalar", center="Cell")
+        createdataitem(
             attr,
             Name="Conc_" + str(i),
             Dimensions=dims,
@@ -81,23 +81,23 @@ def __create_timecollection(
 
 
 def __create_particleseries(domain, name, particleinfo, fileloc):
-    timegrid = mx.creategrid(domain, Name=name, GridType="Collection", CollectionType="Temporal")
+    timegrid = creategrid(domain, Name=name, GridType="Collection", CollectionType="Temporal")
     # time loop of grids
     for i in range(len(particleinfo)):
         dataloc = fileloc + "Step" + str(i) + "/"
         sz = particleinfo[i][0]
         time = particleinfo[i][1]
-        timestep = mx.creategrid(
+        timestep = creategrid(
             timegrid, Name="Step" + str(i), GridType="Uniform", CollectionType=None
         )
 
-        mx.createtimevalue(timestep, str(time))
+        createtimevalue(timestep, str(time))
         # Create topology
-        mx.createtopology(timestep, name=None, topologytype="Polyvertex", NodesPerElement=str(sz))
+        createtopology(timestep, name=None, topologytype="Polyvertex", NodesPerElement=str(sz))
         # Create Geometry
-        geo = mx.creategeometry(timestep, name=None, geotype="XYZ")
+        geo = creategeometry(timestep, name=None, geotype="XYZ")
         dims = str(sz) + " 3"
-        mx.createdataitem(
+        createdataitem(
             geo,
             Name=None,
             Dimensions=dims,
@@ -107,8 +107,8 @@ def __create_particleseries(domain, name, particleinfo, fileloc):
             datafile=dataloc + "position",
         )
 
-        attr = mx.createattribute(timestep, Name="GlobalIds", att_type="Scalar", center="Node")
-        mx.createdataitem(
+        attr = createattribute(timestep, Name="GlobalIds", att_type="Scalar", center="Node")
+        createdataitem(
             attr,
             Name=None,
             Dimensions=str(sz),
@@ -117,8 +117,8 @@ def __create_particleseries(domain, name, particleinfo, fileloc):
             Format="HDF",
             datafile=dataloc + "GlobalIds",
         )
-        attr = mx.createattribute(timestep, Name="SourceIds", att_type="Scalar", center="Node")
-        mx.createdataitem(
+        attr = createattribute(timestep, Name="SourceIds", att_type="Scalar", center="Node")
+        createdataitem(
             attr,
             Name=None,
             Dimensions=str(sz),
@@ -127,8 +127,8 @@ def __create_particleseries(domain, name, particleinfo, fileloc):
             Format="HDF",
             datafile=dataloc + "SourceIds",
         )
-        attr = mx.createattribute(timestep, Name="VerticalIds", att_type="Scalar", center="Node")
-        mx.createdataitem(
+        attr = createattribute(timestep, Name="VerticalIds", att_type="Scalar", center="Node")
+        createdataitem(
             attr,
             Name=None,
             Dimensions=str(sz),
@@ -137,8 +137,8 @@ def __create_particleseries(domain, name, particleinfo, fileloc):
             Format="HDF",
             datafile=dataloc + "VerticalIds",
         )
-        attr = mx.createattribute(timestep, Name="Mass", att_type="Scalar", center="Node")
-        mx.createdataitem(
+        attr = createattribute(timestep, Name="Mass", att_type="Scalar", center="Node")
+        createdataitem(
             attr,
             Name=None,
             Dimensions=str(sz),
@@ -317,7 +317,7 @@ def _writeParticle_hdf(root, data, scale, transform):
             time = lvl.time + lvl.start_time
             pos = lvl.pos.copy()
             if transform is not None:
-                for k in range(pos, shape[0]):
+                for k in range(pos.shape[0]):
                     pos[k, :, 0], pos[k, :, 1] = transform(pos[k, :, 0], pos[k, :, 1])
             # Scale all positions everything
             pos[:, :, 0] /= scale[0]
@@ -327,15 +327,8 @@ def _writeParticle_hdf(root, data, scale, transform):
             _write_data(pos, lvl.mass, lvl.ids, time, lvl_grp)
 
 
-def save_concentrationdata(
-    particledata,
-    simulationname="simulation",
-    codata=None,
-    conc=None,
-    scale=None,
-    transform=None,
-    topology=None,
-):
+def save_concentrationdata(particledata, simulationname="simulation", codata=None,
+                           conc=None, scale=None, transform=None, topology=None):
     """
     Write concentration data from trajectories and conc to tropomi
     data along with actual tropomi data in 2d
@@ -345,8 +338,8 @@ def save_concentrationdata(
     # Create root for HDF5 file
     f = h5py.File(simfilename, "a")
     # create root and domain for XDMF file
-    # root = mx.createheader()
-    # domain = mx.createdomain(root)
+    # root = createheader()
+    # domain = createdomain(root)
 
     # Write Particle data
     # HDF5
@@ -372,16 +365,16 @@ def save_concentrationdata(
     #     domain, "Topology1", "Geo1", "2DSMesh", tropomi_topodims, _root_tropomi
     # )
     # # Create Uniform, Spatial grid
-    # orig_grid = mx.creategrid(
+    # orig_grid = creategrid(
     #     domain, Name="TropomiMeasured", GridType="Uniform", CollectionType="Spatial"
     # )
-    # mx.createreference(orig_grid, "Topology", "Topology[1]")
-    # mx.createreference(orig_grid, "Geometry", "Geometry[1]")
-    # attr = mx.createattribute(
+    # createreference(orig_grid, "Topology", "Topology[1]")
+    # createreference(orig_grid, "Geometry", "Geometry[1]")
+    # attr = createattribute(
     #     orig_grid, Name="MeasuredTropomiConc", att_type="Scalar", center="Cell"
     # )
     # flname = _root_tropomi + "Satellite"
-    # mx.createdataitem(
+    # createdataitem(
     #     attr,
     #     Name="Conc",
     #     Dimensions=tropomi_concdims,
@@ -435,5 +428,5 @@ def save_concentrationdata(
     #         "ConcFromTraj",
     #     )
     # # Write header file
-    # mx.writexml(root, simulationname)
+    # writexml(root, simulationname)
     # f.close()

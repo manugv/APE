@@ -152,7 +152,7 @@ class FlowData:
                 d1 = Dataset(blk[-1], "r")
                 k1 = k + blk[1] - blk[0] + 1
                 # print("vel", i, k, k1, blk[0], blk[1])
-                tmp[k:k1] = d1[i][blk[0] : blk[1] + 1, _l1:_l2].data
+                tmp[k:k1] = d1[i][blk[0]: blk[1] + 1, _l1:_l2].data
                 k = k1
                 d1.close()
             data[i] = tmp
@@ -175,7 +175,7 @@ class FlowData:
                 d1 = Dataset(blk[-1], "r")
                 k1 = k + blk[1] - blk[0] + 1
                 # print("single", i, k, k1, blk[1] - blk[0])
-                tmp[k:k1] = d1[i][blk[0] : blk[1] + 1].data
+                tmp[k:k1] = d1[i][blk[0]: blk[1] + 1].data
                 k = k1
                 d1.close()
             if i == "z":
@@ -291,19 +291,18 @@ class FlowData:
 
     def getvelocities_2d(self, filename):
         self.filename_2d = filename
-
-    #     # read velocity data at 10mts and 100mts (lower resolution)
-    #     df1 = Dataset(filename, 'r')
-    #     # Flip if the latitude values are in descending order
-    #     self.lat = np.flip(df1['latitude'][:].data)
-    #     self.lon = df1['longitude'][:].data
-    #     # Here axis=0 is time (24hrs data) and axis=1 is latitude
-    #     if flowheight == '10':
-    #         self.u = np.flip(df1['u10'][:, :, :], axis=1)
-    #         self.v = np.flip(df1['v10'][:, :, :], axis=1)
-    #     elif flowheight == '100':
-    #         self.u = np.flip(df1['u100'][:, :, :], axis=1)
-    #         self.v = np.flip(df1['v100'][:, :, :], axis=1)
-    #     df1.close()
-    #     # TODO: Return success variables
-    #     return
+        #     # read velocity data at 10mts and 100mts (lower resolution)
+        #     df1 = Dataset(filename, 'r')
+        #     # Flip if the latitude values are in descending order
+        #     self.lat = np.flip(df1['latitude'][:].data)
+        #     self.lon = df1['longitude'][:].data
+        #     # Here axis=0 is time (24hrs data) and axis=1 is latitude
+        #     if flowheight == '10':
+        #         self.u = np.flip(df1['u10'][:, :, :], axis=1)
+        #         self.v = np.flip(df1['v10'][:, :, :], axis=1)
+        #     elif flowheight == '100':
+        #         self.u = np.flip(df1['u100'][:, :, :], axis=1)
+        #         self.v = np.flip(df1['v100'][:, :, :], axis=1)
+        #     df1.close()
+        #     # TODO: Return success variables
+        #     return

@@ -130,13 +130,13 @@ def get_vertical_coord_vel(data):
     # get factor that is used to compute R_m and T_v
     Rm, Tv = get_Rm_Tv(data["q"], data["t"])
 
-    # v = (Rm.T.w)/(p.g)
-    vel_w = np.multiply((np.multiply(Rm, data["t"])), data["w"])  # Rm.T.w
-
     # compute pressure
     pf, phf = get_full_pressure(data["level"], data["pres"], params_lvl)
 
     # v = (Rm.T.w)/(p.g)
+    # v = (Rm.T.w)
+    vel_w = np.multiply((np.multiply(Rm, data["t"])), data["w"])  # Rm.T.w
+    # v = v/(p.g)
     vel_w = np.divide(vel_w, pf)
 
     # Compute gravity g = IFG + FAC

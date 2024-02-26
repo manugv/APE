@@ -8,12 +8,11 @@ Parameter Containers for different variables
 
 try:
     from numpy import array
-    from yaml import load, FullLoader
+    from yaml import safe_load
     from datetime import datetime, timedelta, date
     from .ModuleDataContainers import Flowinfo, SimulationTime, Dispersion
     from .ModuleDataContainers import ParticleSplitting, MultipleParticleRelease
-    from .ModuleDataContainers import Traj2ConcInfo
-    from .ModEE_CreateSources import SourcesInit
+    from .ModuleDataContainers import Traj2ConcInfo, DataContainer
     from .ModuleTransform import TransformCoords
     from .ModDataPrepare_SatelliteRead import get_filenames
 except ImportError:
@@ -30,38 +29,85 @@ class InputParameters:
             return None
 
         # load yaml using load
-        _f = load(fl, FullLoader)
+        _f = safe_load(fl)
+
+        # get days to run simulation
+        self.days = self.get_days(_f)
+        # Satellite and output directories
+        self.satellite_dir = _f["SatelliteDir"]
+        self.output_dir = _f["OutputDir"]
+        self.sourcetype = _f["Source"]
+
         # Fire parameters
         if _f["Source"] == "Fire":
             self.init_fireparams(_f["Fire"])
-        # Industrial sourcess
+            self.output_file_prefix = self.output_dir + self.file_prefix
+            
+        # Industrial sources
         if _f["Source"] == "Industrial":
             self.init_industrialparams(_f["Industrial"])
-        # Satellite input and output directories
-        _dirs = _f["Directories"]
-        self.satellite_dir = _dirs["satellite_dir"]
-        self.output_dir = _dirs["output_dir"]
-        self.output_file_prefix = self.output_dir + self.o_filename
-        self.output_particles_dir = _dirs["output_particles_dir"]
-        self.output_particlefile_prefix = self.output_particles_dir + self.o_filename
-        # Get all satellite files in the folder and orbits
-        self.sat_files = get_filenames(self.satellite_dir))
+            self.output_file = self.output_dir + self.file_prefix
 
-        # Flow
-        self.param_flowinfo = Flowinfo(_f["Flow"])
-        # Simulation time
-        self.param_simtime = SimulationTime(_f["SimulationTime"])
-        # Dispersion parameters
-        self.param_disp = Dispersion(_f["Dispersion"])
-        # Particle Release
-        self.param_partrelease = MultipleParticleRelease(_f["MultipleParticleRelease"], self.param_simtime.sim_time_sec)
-        # Particle Splitting
-        self.param_partsplit = ParticleSplitting(_f["ParticleSplitting"])
-        # Trajectory data to concentration
-        self.param_traj2conc = Traj2ConcInfo(_f["TrajectoriesToConcentrations"])
-        # sources
-        self.param_source = SourcesInit(_f["Sources"])
+        # Get all satellite files in the folder and orbits
+        self.sat_files = get_filenames(self.satellite_dir)
+
+        # Plume detection should be done or not
+        self.detectplume = _f["PlumeDetection"]["Flag"]
+
+        # Emission estimation
+        self.estimateemission = self.init_emissionestimation(_f["EmissionEstimation"])
         fl.close()
+
+    def init_emissionestimation(self, _em):
+        """Initialize emission estimation variables.
+
+        Parameters
+        ----------
+        _em : Dict
+            Dict of emission parameters.
+
+        Return
+        --------
+        emis: class of parameters.
+
+        """
+        emis = DataContainer()
+        emis.flag = _em["Flag"]
+        emis.method = _em["Method"]
+        if emis.method == "CFM":
+            _em1 = _em["CFM"]
+            # plume height
+            emis.plumeheighttype = _em1["Plumeheight"]["Type"]
+            emis.plumeheight = _em1["Plumeheight"]["Height"]
+            emis.emisname = _em1["Plumeheight"]["Name"]
+            emis.plumeheightfromsurface = _em1["Plumeheight"]["HeightFromSurface"]
+            # flow
+            emis.flow = Flowinfo(_em1["Flow"])
+            # if injection height is given then file to it needed
+            if emis.plumeheight == 'injht':
+                emis.injht_dir = _em1["Plumeheight"]["InjectionHeightDir"]
+            # if the plume height is varying
+            if emis.plumeheighttype == "Varying":
+                _sim = _em1["Simulation"]
+                emis.particledir = _sim["OutputParticlesDir"]
+                # Simulation time
+                emis.param_simtime = SimulationTime(_sim["Time"])
+                # Dispersion parameters
+                emis.param_disp = Dispersion(_sim["Dispersion"])
+                # Particle Release
+                emis.param_partrelease = MultipleParticleRelease(_sim["MultipleParticleRelease"],
+                                                                 emis.param_simtime.sim_time_sec)
+                # Particle Splitting
+                emis.param_partsplit = ParticleSplitting(_sim["ParticleSplitting"])
+                # Trajectory data to concentration
+                emis.param_traj2conc = Traj2ConcInfo(_sim["TrajectoriesToConcentrations"])
+        elif emis.method == "Divergence":
+            _em1 = _em["Divergence"]
+            emis.name = _em1["Name"]
+            emis.plumeheight = _em1["Plumeheight"]
+            emis.flow = Flowinfo(_em1["Flow"])
+            emis.plumeheightfromsurface = _em1["HeightFromSurface"]
+        return emis
 
     def get_days(self, _date):
         """List all days
@@ -79,17 +125,17 @@ class InputParameters:
            Contains all days in date format
         """
         # define start date
-        if isinstance(_date["startdate"], (date, datetime)):
-            self.startdate = _date["startdate"]
+        if isinstance(_date["StartDate"], (date, datetime)):
+            self.startdate = _date["StartDate"]
         else:
-            self.startdate = datetime.strptime(_date["startdate"], "%Y-%m-%d").date()
+            self.startdate = datetime.strptime(_date["StartDate"], "%Y-%m-%d").date()
         # define end date
-        if isinstance(_date["enddate"], (date, datetime)):
-            self.enddate = _date["enddate"]
+        if isinstance(_date["EndDate"], (date, datetime)):
+            self.enddate = _date["EndDate"]
         else:
-            self.enddate = datetime.strptime(_date["enddate"], "%Y-%m-%d").date()
+            self.enddate = datetime.strptime(_date["EndDate"], "%Y-%m-%d").date()
         if self.startdate > self.enddate:
-            print("Start date is smaller then end date")
+            print("Input start date is larger than the end date")
             exit()
         days = []
         stdate = self.startdate
@@ -110,29 +156,25 @@ class InputParameters:
 
         """
         self.viirsdir = _fire["viirs_dir"]
-        self.gfasdir = _fire["gfas_dir"]
-        self.gfasfile = self.gfasdir + _fire["gfas_file"]
         self.roi = array(_fire["roi"])
         self.roi_name = _fire["roi_name"]
-        # date specification
-        self.days = self.get_days(_fire)
         self.transform = TransformCoords([self.roi[2], self.roi[0]])
-        self.o_filename = self.roi_name + "_"
-
+        self.file_prefix = self.roi_name
+        self.source_loc = ""
+        self.source_name = ""
+        
     def init_industrialparams(self, _ind):
-        """Create Industrial parameters
+        """Create Industrial parameters.
 
-        Industrial parameters from he input dict
+          Industrial parameters from he input dict
 
-        Parameters
-        ----------
-        _ind : Dict
-            Dict containing data
+          Parameters
+          ----------
+          _ind : Dict
+              Dict containing data
 
-        """
-        self.ind_source = array(_ind["Source"])
-        self.ind_source_name = _ind["Source_name"]
-        # date specification
-        self.days = self.get_days(_ind)
-        self.transform = TransformCoords([self.ind_source[0], self.ind_source[1]])
-        self.o_filename = self.ind_source_name + "_"
+         """
+        self.source_loc = array(_ind["Source"])
+        self.source_name = _ind["Source_name"]
+        self.transform = TransformCoords([self.source_loc[0], self.source_loc[1]])
+        self.file_prefix = self.source_name

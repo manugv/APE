@@ -162,7 +162,7 @@ def get_source_pixel(data, src):
         return flag, False, px
 
 
-def filter_grid_size(x_pixel):
+def filtergridsize(x_pixel, val):
     """
     Filter based on grid size.
 
@@ -180,7 +180,7 @@ def filter_grid_size(x_pixel):
         If it is withing given grid locations.
 
     """
-    if 45 <= x_pixel < 171:
+    if val[0] <= x_pixel < val[1]:
         return True
     else:
         return False
@@ -205,18 +205,21 @@ def filter_good_data(co_mask, qa_value):
         True if good data.
 
     """
+    breakpoint()
     # mask further bad values
-    co_mask[qa_value < 0.5] = True
+    _co1 = np.zeros_like(co_mask)
+    _co1[:, :] = co_mask[:, :]
+    _co1[qa_value < 0.5] = True
     # Flip the mask, so good values
-    _co = ~co_mask
+    _co = ~_co1
     nx = np.int_(_co.shape[0] / 2)
     _inner = _co[nx - 3: nx + 4, nx - 3: nx + 4]
     # QA and other quality check
-    if (_inner.sum() / _inner.size > 0.85) & (_co.sum() / _co.size > 0.8):
+    if (_inner.mean() > 0.85) & (_co.mean() > 0.8):
         print("    Good Data:-  ", _inner.sum() / _inner.size, _co.sum() / _co.size)
-        return True, co_mask
+        return True, _co1
     else:
-        return False, []
+        return False, _co1
 
 
 def _extractgranule(x, data, dta, nos=20):
@@ -250,42 +253,64 @@ def _extractgranule(x, data, dta, nos=20):
     # Check if all CO values are nans
     co = data.co_column[i1: i2 - 1, j1: j2 - 1].filled(fill_value=np.nan)
     flag = np.logical_not(np.isnan(co).sum() == co.size)
-    dta.__setattr__("f_not_all_nans", flag)
-    # Get data
-    if dta.f_not_all_nans:
-        dta.__setattr__("source_pixel_id", x)
-        dta.__setattr__("orbit_ref_time", data.time)
-        for i, fl in zip(val_ext, val_flag):
-            if fl == 0:
-                _tmp = data.__getattribute__(i)[i1: i2 - 1, j1: j2 - 1]
-                dta.__setattr__(i, _tmp)
-            elif fl == 2:
-                _tmp1 = data.__getattribute__(i)[i1:i2].data
-                dta.__setattr__(i, _tmp1)
-                dta.__setattr__(
-                    "measurement_time", get_orbit_time(dta.orbit_ref_time, dta.deltatime.mean())
-                )
-            else:
-                _tmp2 = data.__getattribute__(i)[i1:i2, j1:j2]
-                dta.__setattr__(i, _tmp2)
-        # print(dta.co_column_corr.mask, dta.qa_value)
-        fflag, _com = filter_good_data(dta.co_column_corr.mask, dta.qa_value)
-        dta.__setattr__("f_qavalue_filter", fflag)
-        if dta.f_qavalue_filter:
-            dta.__setattr__("co_qa_mask", _com)
-            dta.__setattr__("f_good_satellite_data", True)
-            dta.__setattr__("orbit", data.orbit)
-            dta.__setattr__("orbit_filename", data.filename)
-        else:
-            print("  Quality of data fails")
-            dta.__setattr__("f_good_satellite_data", False)
-    else:
+
+    dta.__setattr__("flag_isnotallnans", flag)
+    # if the data is nans then return good satellite data as False
+    if not dta.flag_isnotallnans:
         print("  Data is just NANs")
-        dta.__setattr__("f_good_satellite_data", False)
+        dta.__setattr__("flag_goodsatellitedata", False)
+        return dta
+    # continue to extract data
+    dta.__setattr__("source_pixel_id", x)
+    dta.__setattr__("orbit_ref_time", data.time)
+    for i, fl in zip(val_ext, val_flag):
+        if fl == 0:
+            _tmp = data.__getattribute__(i)[i1: i2 - 1, j1: j2 - 1]
+            if i == "co_column_corr":
+                _tmp1 = np.ma.MaskedArray(_tmp.filled(fill_value=np.nan), _tmp.mask, fill_value=np.nan)
+                dta.__setattr__(i, _tmp1)
+            else:
+                dta.__setattr__(i, _tmp)
+        elif fl == 2:
+            _tmp1 = data.__getattribute__(i)[i1:i2 - 1].data
+            dta.__setattr__(i, _tmp1)
+            dta.__setattr__("measurement_time", get_orbit_time(dta.orbit_ref_time, dta.deltatime.mean()))
+        else:
+            _tmp2 = data.__getattribute__(i)[i1:i2, j1:j2]
+            dta.__setattr__(i, _tmp2)
+    # data read complete
+    # check if the data is good based on qa_values and filter
+    fflag, _com = filter_good_data(dta.co_column_corr.mask, dta.qa_value)
+    dta.__setattr__("flag_qavaluefilter", fflag)
+    # if qa_filter says the data is bad then return
+    if not dta.flag_qavaluefilter:
+        print("  Quality of data fails")
+        dta.__setattr__("flag_goodsatellitedata", False)
+        return dta
+    # qa_filter is good
+    dta.__setattr__("co_qa_mask", _com)
+    dta.__setattr__("flag_goodsatellitedata", True)
+    dta.__setattr__("orbit", data.orbit)
+    dta.__setattr__("orbit_filename", data.filename)
     return dta
 
 
-def extract_and_filter_satellitedata(data, src):
+def generateuniqueid(_time, src):
+    uniqueid = _time.strftime("%Y%m%d_%H%M_")
+    # latitude
+    if src[0] < 0:
+        uniqueid = uniqueid + "S" + ("{:.2f}".format(np.abs(src[0]))).zfill(5)
+    else:
+        uniqueid = uniqueid + "N" + ("{:.2f}".format(src[0])).zfill(5)
+    # longitude
+    if src[1] < 0:
+        uniqueid = uniqueid + "W" + ("{:.2f}".format(np.abs(src[1]))).zfill(6)
+    else:
+        uniqueid = uniqueid + "E" + ("{:.2f}".format(src[1])).zfill(6)
+    return uniqueid
+
+
+def extractfilter_satellitedata(data, src, cutoff=20):
     """Filter and extract data.
 
     Parameters
@@ -303,23 +328,29 @@ def extract_and_filter_satellitedata(data, src):
         Data containing extracted data.
     """
     extracteddata = DataContainer()
+    # define grid filtering
+    sh = data.lat.shape[1]
+    gridfilt = [cutoff + 1, sh - cutoff]
     # Get pixel containing the fire source
     inorb_flag, loc_flag, pixel_loc = get_source_pixel(data, src)
     extracteddata.__setattr__("source", src)
-    extracteddata.__setattr__("f_source_in_orbit", loc_flag)
-    # extracted_firedata.__setattr__("f_source_pixel_loc", )
+    extracteddata.__setattr__("flag_sourceinorbit", loc_flag)
     # Filter based on grid size
-    if extracteddata.f_source_in_orbit:
-        extracteddata.__setattr__("f_filter_gridsize", filter_grid_size(pixel_loc[1]))
+    if extracteddata.flag_sourceinorbit:
+        extracteddata.__setattr__("flag_gridsizefilter", filtergridsize(pixel_loc[1], gridfilt))
         # Extract the data
-        if extracteddata.f_filter_gridsize:
+        if extracteddata.flag_gridsizefilter:
             extracteddata = _extractgranule(pixel_loc, data, extracteddata)
+            if not extracteddata.flag_goodsatellitedata:
+                return extracteddata
+            uniqueid = generateuniqueid(extracteddata.measurement_time, extracteddata.source)
+            extracteddata.__setattr__("uniqueid", uniqueid)
             return extracteddata
         else:
             print("  Grid sizes are large")
-            extracteddata.__setattr__("f_good_satellite_data", False)
+            extracteddata.__setattr__("flag_goodsatellitedata", False)
             return extracteddata
     else:
         print("  Source not in the orbit")
-        extracteddata.__setattr__("f_good_satellite_data", False)
+        extracteddata.__setattr__("flag_goodsatellitedata", False)
         return extracteddata

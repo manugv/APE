@@ -22,7 +22,7 @@ def compute_emissions(day, globalparams, fire_satdata, fire_viirs, plumecontaine
     transform = TransformCoords(fire_satdata.source)
 
     # Create transaction lines and remove background
-    
+
     massflux = create_tlines_remove_background(fire_satdata, plumecontainer, transform)
 
     # IF the plume was good after background subtraction

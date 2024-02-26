@@ -1,0 +1,32 @@
+# Time
+StartDate: 2019-9-1   # year-month-day
+EndDate: 2019-9-3
+
+# Satellite data directory
+SatelliteDir: '/nfs/Tropomi/lv2/Operational/CO/'
+# Output directory
+OutputDir: '/data/manugv/outputdir/'
+
+Source: 'Industrial'    # Fire, Industrial
+
+Industrial:
+  Source: [52.56, 39.63]  # [lat, lon]
+  Source_name: 'Lipstek'
+
+PlumeDetection:
+  Flag: True
+  
+EmissionEstimation:
+  Flag: True
+  Method: "Divergence"  # CFM, Divergence
+
+  Divergence:
+    Name: vel300   # group name where data is saved
+    Plumeheight: 300  # in meters
+    HeightFromSurface: True
+    Flow:
+      Dir: '/data/manugv/outputdir/'   # directory with velocity fields or where they have to be downloaded
+      # for 10m and 100m /nfs/METEO/ERA5/
+      cdsapi:  # url and key to download data
+        url: https://cds.climate.copernicus.eu/api/v2 
+        key: 77709:f92a02d1-614a-422d-86ac-2bd49942727d

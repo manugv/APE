@@ -8,7 +8,38 @@ Created on Tue Jun  7 12:07:00 2022.
 
 import numpy as np
 from datetime import timedelta
-import pandas as pd
+# from dataclasses import dataclass
+
+
+# @dataclass
+# class IndustrialFlags:
+#     orbitfile: bool = False   # flag_orbits defines if there is file with orbit
+#     sourceinorbit: bool = False  # loc_flag
+#     gridsizefilter: bool = False  # f_filter_gridsize
+#     satdataisnotnan: bool = False  # f_not_all_nans
+#     satqavaluefilter: bool = False  # f_qavalue_filter
+#     plumedetected: bool = False  # plumedetected
+
+
+# @dataclass
+# class FireFlags:
+#     orbitfile: bool = False   # flag_orbits defines if there is file with orbit
+#     sourceinorbit: bool = False  # loc_flag
+#     gridsizefilter: bool = False  # f_filter_gridsize
+#     satdataisnotnan: bool = False  # f_not_all_nans
+#     satqavaluefilter: bool = False  # f_qavalue_filter
+#     plumedetected: bool = False  # plumedetected
+#     plumelengthfilter: bool = False   # f_nofirearoundplume
+#     singlesourceplume: bool = False  # f_nofirearoundplume
+#     injectionheightexists: bool = False  # f_Injectionheightexists
+#     backremovalsuccess: bool = False  # f_good_plume_bs
+#     particlesplumealign: bool = False  # f_particle_plume_alignment
+#     velocitylessthan2mps: bool = False  #
+
+
+class DataContainer:
+    """Data container for different data."""
+    pass
 
 
 def get_time_in_sec(_key):
@@ -22,12 +53,6 @@ def get_time_in_sec(_key):
     if "Second" in _key.keys():
         sec = _key["Second"]
     return hr * 3600 + mn * 60 + sec
-
-
-class DataContainer:
-    """Data container for different data."""
-
-    pass
 
 
 class ROI:
@@ -44,11 +69,15 @@ class ROI:
 
 class Flowinfo:
     def __init__(self, _key):
-        self.inputdir = _key["era5_dir"]
-        self.file_flow = _key["FlowField"]
-        self.file_pres = _key["SurfacePresGeop"]
-        self.modellevels = _key["ModelLevels"]
-        self.origin = np.zeros((2))
+        self.inputdir = _key["Dir"]
+        if "cdsapi" in _key.keys():
+            self.cdsapiurl = _key["cdsapi"]["url"]
+            self.cdsapikey = _key["cdsapi"]["key"]            
+        if "FlowField" in _key.keys():
+            self.file_flow = _key["FlowField"]
+            self.file_pres = _key["SurfacePresGeop"]
+            self.modellevels = _key["ModelLevels"]
+            self.origin = np.zeros((2))
 
     def update_origin(self, lat, lon):
         self.origin[0] = lat
@@ -62,8 +91,8 @@ class SimulationTime:
         self.dt = get_time_in_sec(_key["TimeStep"])
         self.savedt = get_time_in_sec(_key["SaveDataTimeStep"])
 
-    def set_start_time(self, plume_time):
-        return plume_time - timedelta(seconds=self.sim_time_sec)
+    def set_start_time(self, measurement_time):
+        return measurement_time - timedelta(seconds=self.sim_time_sec)
 
 
 class Dispersion:
@@ -108,3 +137,4 @@ class Traj2ConcInfo:
             self.avgtime = get_time_in_sec(_key["AveragingTime"])
             self.deltatime = get_time_in_sec(_key["TimeStep"])
             self.roi_resolution = np.asarray(_key["GridResolution"])
+

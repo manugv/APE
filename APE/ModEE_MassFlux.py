@@ -24,7 +24,7 @@ from scipy.signal import argrelmin
 from shapely.geometry import LineString
 from skimage.morphology import skeletonize
 
-import .ModuleRefineGrids as mod_refine
+from .ModuleRefineGrids import RefineGridsUniform
 
 
 ##################################################################
@@ -119,7 +119,7 @@ def compute_medial_line(lat_nodes, lon_nodes, plumemask, src, trans):
     compute raw medial line
     This is not a refined line
     """
-    refine = mod_refine.RefineGridsUniform(4)
+    refine = RefineGridsUniform(4)
     xn, yn, xc, yc = refine.resize_coordinates(lat_nodes.copy(), lon_nodes.copy())
     zval = refine.resize_values(plumemask)
     ml_id = skeletonize(zval)

@@ -8,9 +8,12 @@ Created on Wed Jun  8 16:11:59 2022.
 
 from .ModEE_MassFlux import (compute_medial_line,  get_plumepoints_slope,
                              get_tlines, particles_height_at_tlines)
-import functions as func
 from .ModuleDataContainers import DataContainer
 import numpy as np
+try:
+    from .functions import get_velocity
+except ImportError:
+    print("Cython function is not compiled well")
 
 
 def get_velocity_mag(coords, height_tline, dir_vect, flow):
@@ -31,7 +34,7 @@ def get_velocity_mag(coords, height_tline, dir_vect, flow):
     _crds[:, 2] = height_tline
     idx = flow.emission_idx[0]
     vl = np.zeros_like(_crds)
-    vl, limits = func.get_velocity(
+    vl, limits = get_velocity(
         _crds,
         flow.lat,
         flow.lon,
@@ -43,7 +46,7 @@ def get_velocity_mag(coords, height_tline, dir_vect, flow):
     if len(flow.emission_idx) > 1:
         vl1 = np.zeros_like(_crds)
         idx = flow.emission_idx[1]
-        vl1, limits = func.get_velocity(
+        vl1, limits = get_velocity(
             _crds,
             flow.lat,
             flow.lon,
@@ -95,22 +98,18 @@ def create_tlines_remove_background(satellitedata, plumecontainer, transform):
     massflux = DataContainer()
 
     # Plume and transaction lines
-    _pline = compute_medial_line(
-        satellitedata.lat_nodes,
-        satellitedata.lon_nodes,
-        plumecontainer.plumemask,
-        satellitedata.source,
-        transform,
-    )
+    _pline = compute_medial_line(satellitedata.lat_nodes,
+                                 satellitedata.lon_nodes,
+                                 plumecontainer.plumemask,
+                                 satellitedata.source,
+                                 transform)
     massflux.__setattr__("fitted_plumeline", _pline)
 
     # Create line
     plume_ds = 2.5
 
     # extract points along plume line at plume_ds
-    dataline = get_plumepoints_slope(
-        massflux.fitted_plumeline, transform, ds=plume_ds, plume_len_km=50
-    )
+    dataline = get_plumepoints_slope(massflux.fitted_plumeline, transform, ds=plume_ds, plume_len_km=50)
     # this is done as dataline is a dict and massflux is a container
     for key, value in dataline.items():
         massflux.__setattr__(key, value)
@@ -121,14 +120,8 @@ def create_tlines_remove_background(satellitedata, plumecontainer, transform):
     satellitedata.__setattr__("ykm", yy)
 
     # Define transaction lines
-    tlines = get_tlines(
-        massflux,
-        satellitedata.co_column_corr,
-        satellitedata.xkm,
-        satellitedata.ykm,
-        transform,
-        80,
-    )
+    tlines = get_tlines(massflux, satellitedata.co_column_corr, satellitedata.xkm,
+                        satellitedata.ykm, transform, 80)
     massflux.__setattr__("tlines", tlines)
 
     # Filter based on background

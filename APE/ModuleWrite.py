@@ -11,12 +11,13 @@ import h5py
 
 class WriteData:
     def __init__(self, filename):
-        self.filename = filename
+        self.filename = filename + ".h5"
         self.grpname = ""
         self.satellitegrpname = "Satellite"
         self.viirsgrpname = "VIIRS"
         self.plumedetectgrpname = "PlumeDetection"
         self.massflux = "Massflux"
+        self.grpdivergence = "Divergence"
 
     def updatefilename(self, newname):
         self.filename = newname + ".h5"
@@ -27,6 +28,41 @@ class WriteData:
         # else create the group
         else:
             return r_grp.create_group(grpname)
+
+    def satellite(self, uniqueid, data):
+        fl = h5py.File(self.filename, "a")
+        _grp = self.get_group(fl, uniqueid)
+        _satgrp = self.get_group(_grp, self.satellitegrpname)
+        for _ky, _val in data.__dict__.items():
+            if _ky not in ["uniqueid"]:
+                if _ky == "measurement_time":
+                    _satgrp.create_dataset(_ky, data=_val.strftime("%Y/%m/%d_%H:%M:%S"))
+                elif "co_column" in _ky:
+                    # mask data needs to be written
+                    _satgrp.create_dataset(_ky, data=_val.data)
+                    _satgrp.create_dataset(_ky+"_mask", data=_val.mask)
+                else:
+                    _satgrp.create_dataset(_ky, data=_val)
+        fl.close()
+
+    def divergence(self, uniqueid, divsimname, data, grid):
+        fl = h5py.File(self.filename, "a")
+        _grp = self.get_group(fl, uniqueid)
+        _divgrp = self.get_group(_grp, self.grpdivergence)
+        _simgrp = self.get_group(_divgrp, divsimname)
+        for _ky, _val in data.__dict__.items():
+            _simgrp.create_dataset(_ky, data=_val)
+        for _ky in ["lat", "lon"]:
+            _simgrp.create_dataset(_ky, data=grid.__dict__[_ky])
+        fl.close()
+
+    def plume(self, uniqueid, data):
+        fl = h5py.File(self.filename, "a")
+        _grp = self.get_group(fl, uniqueid)
+        _plmgrp = self.get_group(_grp, self.plumedetectgrpname)
+        for _ky, _val in data.__dict__.items():
+            _plmgrp.create_dataset(_ky, data=_val)
+        fl.close()
 
     def write(self, sat_data, fire_data, plume_data):
         # file name is the name of the file based on month
@@ -419,10 +455,9 @@ class WriteData:
         mass_grp = self.get_group(fire_grp, self.massflux)
 
         # General massflux keys
-        self._massfluxgeneral(self, massflux_data, mass_grp):
+        self._massfluxgeneral(self, massflux_data, mass_grp)
         # for _ky in massflux_attrs:
         #     mass_grp.attrs[_ky] = massflux_data.__getattribute__(_ky)
-
         # for _ky in massflux_keys:
         #     mass_grp.create_dataset(_ky, data=massflux_data.__getattribute__(_ky))
 
@@ -468,3 +503,5 @@ class WriteData:
                         for _ky in varying_emis_keys:
                             line_grp.create_dataset(_ky, data=_ln.__getattribute__(_ky))
         fl.close()
+
+

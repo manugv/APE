@@ -80,9 +80,6 @@ def satellitedataoveranorbit(orbitdata, orbittoread, params):
     params : Class
         InitialParameters class
 
-    Examples
-    --------
-    
     """
     if orbitdata.orbit != orbittoread:
         orbitdata = readsatellitedata(params, orbittoread)

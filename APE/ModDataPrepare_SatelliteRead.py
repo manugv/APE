@@ -8,7 +8,7 @@ Created on Fri Jun  3 15:24:23 2022.
 
 from netCDF4 import Dataset  # type: ignore
 import numpy as np
-import pathlib
+from .ModuleChecks import Path, doesfileexist
 from pandas import DataFrame
 from .ModDataPrepare_Destriping import calc_stripe_mask
 from .ModuleDataContainers import DataContainer
@@ -103,7 +103,7 @@ def get_filenames(datadir):
 
     """
     flist = []
-    for p in pathlib.Path(datadir).rglob("*.nc"):
+    for p in Path(datadir).rglob("*.nc"):
         if p.is_file():
             flist.append(str(p))
     fl_ = DataFrame({"filename": flist})
@@ -215,22 +215,22 @@ def get_co_column(orbit, version, _val, f, qa_value):
         CO column data.
 
     """
-    # Destrip the data
-    if (orbit < 19258) & (version < 20200):
-        codata = f[_val][0]
-        qa_idx = (qa_value <= 0) | (qa_value > 1) | codata.mask
-        co1 = codata.data
-        co = co1.copy()
-        co[qa_idx] = np.nan
-        ds_fft = calc_stripe_mask(co, "fft")
-        co_fft = np.ma.MaskedArray(co1 - ds_fft, mask=qa_idx)
-    else:
-        codata = f[_val][0]
-        co_fft = f[_val + "_corrected"][0]
+    # Destrip everything
+    # if (orbit < 19258) & (version < 20200):
+    codata = f[_val][0]
+    qa_idx = (qa_value <= 0) | (qa_value > 1) | codata.mask
+    co1 = codata.data
+    co = co1.copy()
+    co[qa_idx] = np.nan
+    ds_fft = calc_stripe_mask(co, "fft")
+    co_fft = np.ma.MaskedArray(co1 - ds_fft, mask=qa_idx, fill_value=np.nan)
+    # else:
+    #     codata = f[_val][0]
+    #     co_fft = f[_val + "_corrected"][0]
     return codata, co_fft
 
 
-def readsatellitedata(filename, orbit, version):
+def readsatellitedata(filename, _orbit, _version):
     """
     Read TROPOMI Orbit data.
 
@@ -251,14 +251,18 @@ def readsatellitedata(filename, orbit, version):
     # Read data
     data = DataContainer()
     data.__setattr__("filename", filename)
-    data.__setattr__("orbit", orbit)
+    data.__setattr__("orbit", _orbit)
+    data.__setattr__("version", _version)
+    if not doesfileexist(filename):
+        return None
+
     f = Dataset(filename, "r")
     for _k, _val in name_list.items():
         # Recompute qa values
         if _k == "qa_value":
-            data.__setattr__(_k, get_qa_values(orbit, version, _val, f))
+            data.__setattr__(_k, get_qa_values(f, _val, _orbit, _version))
         elif _k == "co_column":
-            d1, d2 = get_co_column(orbit, version, _val, f, data.qa_value)
+            d1, d2 = get_co_column(_orbit, _version, _val, f, data.qa_value)
             data.__setattr__(_k, d1)
             data.__setattr__(_k + "_corr", d2)
         else:
