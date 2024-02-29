@@ -1,0 +1,38 @@
+# Time
+StartDate: 2019-9-8   # year-month-day
+EndDate: 2019-9-9
+
+# Satellite data directory
+SatelliteDir: '/nfs/Tropomi/lv2/Operational/CO/'
+# Output directory
+OutputDir: '/data/manugv/outputdir/'
+
+Source: 'Industrial'    # Fire, Industrial
+
+Industrial:
+  Source: [52.56, 39.63]  # [lat, lon]
+  Source_name: 'Lipstek2'
+
+PlumeDetection:
+  Flag: True
+  
+EmissionEstimation:
+  Flag: True
+  MolarmassGas: 0.02801  # kg/mol for CO
+  Method: "CFM"  # CFM, Divergence
+
+  CFM:
+    Plumeheight:
+      Type: Constant   # Constant
+      Height: 200      # injht or 10 or 100 in m
+      HeightFromSurface: True  # height from the surface
+      Name: Const100   # name of the emission variable in the output file
+    
+    # if the velocity fields already exist
+    Flow:
+      Dir: '/data/manugv/outputdir/'   # directory with velocity fields or where they have to be downloaded
+      # for 10m and 100m /nfs/METEO/ERA5/
+      cdsapi:  # url and key to download data
+        url: https://cds.climate.copernicus.eu/api/v2 
+        key: 77709:f92a02d1-614a-422d-86ac-2bd49942727d
+    

@@ -1,0 +1,20 @@
+# Time
+StartDate: 2019-9-1   # year-month-day
+EndDate: 2019-9-10
+
+# Satellite data directory
+SatelliteDir: '/nfs/Tropomi/lv2/Operational/CO/'
+# Output directory
+OutputDir: '/data/manugv/outputdir/'
+
+Source: 'Industrial'    # Fire, Industrial
+
+Industrial:
+  Source: [52.56, 39.63]  # [lat, lon]
+  Source_name: 'Lipstek1'
+
+PlumeDetection:
+  Flag: True
+  
+EmissionEstimation:
+  Flag: False
