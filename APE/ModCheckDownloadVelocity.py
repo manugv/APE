@@ -159,14 +159,29 @@ def checkanddownloadvelocity(_key, plumeheight, flow, source_name):
             # download data
             download_era_pressure(area, timefile_fields, flow.cdsapiurl, flow.cdsapikey)
             print("             .....Done")
+        else:
+            print("        Velocity data exists")
 
 
-def checkanddownloadvelocity_alldata(params):
+def checkanddownloadvelocity_alldata(params, onlyplumes=False):
+    """Check for velocity data and download it if required. 
+
+    Downloads the velocity data based on the input.
+
+    Parameters
+    ----------
+    params : InputParameters class
+        Contains input paramters
+    onlyplumes : Bool
+        Download velocity fields for only detected plumes.
+
+    """
     # get data for which velocity is needed
-    _readdata = ReadData(params.output_file, params.days)
+    _readdata = ReadData(params.output_file, params.days, onlyplumes)
+    
     # check if the velocity fields exist or not and download
     for _ky in _readdata.keys:
-        print("     Data for ", _ky)
+        print("   Checking velcity data for ", _ky)
         checkanddownloadvelocity(_ky, params.estimateemission.plumeheight,
                                  params.estimateemission.flow, params.source_name)
         

@@ -47,7 +47,7 @@ class VelocityInterpolation:
         file = Path(filename)
         if file.is_file():
             # read grib data
-            grbs = xr.open_dataset(filename, engine="cfgrib", backend_kwargs={'indexpath': ''})
+            grbs = xr.open_dataset(filename, engine="cfgrib", backend_kwargs={"indexpath": ""})
         else:
             print("Velocity field file does not exist")
         # get velocity and interpolate at time t
@@ -57,19 +57,18 @@ class VelocityInterpolation:
 
     def _computefunction2(self, measuretime):
         # step 1: Check if the file exists
-        breakpoint()
         self.measuretime = measuretime
         # filename
         filename = (self.dirprefix + self.measuretime.strftime("%Y%m%d_%H%M") + ".nc")
         file = Path(filename)
         if file.is_file():   # check if file exists
             # read grib data
-            hf = Dataset(filename, 'r')
+            hf = Dataset(filename, "r")
         else:
             print("Velocity field file does not exist")
             exit()
         # step 2: Check if time exists
-        dtimes = num2date(hf['time'], hf['time'].units)
+        dtimes = num2date(hf["time"], hf["time"].units)
         if (self.measuretime >= dtimes[0]) and (self.measuretime <= dtimes[-1]):
             index = np.searchsorted(dtimes, self.measuretime)
         else:
@@ -78,23 +77,27 @@ class VelocityInterpolation:
             exit()
         
         # read data based on time
-        lon = hf['longitude'][:].data
-        lat = hf['latitude'][:].data
-        u = np.flip(hf['u'][index-1:index+1].data, axis=1)  # height is axis 1 and time is axis 0
-        v = np.flip(hf['v'][index-1:index+1].data, axis=1)
-        z = np.flip(hf['z'][index-1:index+1].data, axis=1)
+        lon = hf["longitude"][:].data
+        lat = hf["latitude"][:].data
+        _u = np.flip(hf["u"][index-1:index+1].data, axis=1)  # height is axis 1 and time is axis 0
+        _v = np.flip(hf["v"][index-1:index+1].data, axis=1)
+        z = np.flip(hf["z"][index-1:index+1].data, axis=1)
         hf.close()   # close the file
 
-        # step 3: Convert z to altitude
+        # step 3: Convert z to altitude. This corresponds to above sea level
         Re = 6371000 # in m
         g = 9.80665  # in m/s^2
         alt = Re*(z/g)/(Re-(z/g))
+        # first level is height from the sea level.
+        # Subtracting it will get us height above ground
+        for i in range(alt.shape[0]):
+            alt[i] = alt[i] - alt[i,0]
         
         # step 4: For each time step get the velocity at the desired height
-        u_vel_0 = interpolatedataatheight(alt[0], self.height, u[0])
-        v_vel_0 = interpolatedataatheight(alt[0], self.height, v[0])
-        u_vel_1 = interpolatedataatheight(alt[1], self.height, u[1])
-        v_vel_1 = interpolatedataatheight(alt[1], self.height, v[1])        
+        u_vel_0 = interpolatedataatheight(alt[0], self.height, _u[0])
+        v_vel_0 = interpolatedataatheight(alt[0], self.height, _v[0])
+        u_vel_1 = interpolatedataatheight(alt[1], self.height, _u[1])
+        v_vel_1 = interpolatedataatheight(alt[1], self.height, _v[1])        
         
         # step 5: Interpolate in time
         dz = ((dtimes[index] - self.measuretime).seconds)/(60*60)
