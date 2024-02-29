@@ -6,10 +6,9 @@ Created on Wed Jun  8 16:11:59 2022.
 @author: Manu Goudar
 """
 
-from .ModEE_MassFlux import (compute_medial_line,  get_plumepoints_slope,
-                             get_tlines, particles_height_at_tlines)
-from .ModuleDataContainers import DataContainer
+from .ModEE_MassFlux import particles_height_at_tlines
 import numpy as np
+
 try:
     from .functions import get_velocity
 except ImportError:
@@ -84,59 +83,6 @@ def vel_and_emis(_ln, plume_ht, flow, fact_emis, suffix=""):
     return flag
 
 
-def create_tlines_remove_background(satellitedata, plumecontainer, transform):
-    """_summary_
-
-    Args:
-        firecontainer (_type_): _description_
-        plumecontainer (_type_): _description_
-        transform (_type_): _description_
-        particles (_type_): _description_
-        flow (_type_): _description_
-    """
-
-    massflux = DataContainer()
-
-    # Plume and transaction lines
-    _pline = compute_medial_line(satellitedata.lat_nodes,
-                                 satellitedata.lon_nodes,
-                                 plumecontainer.plumemask,
-                                 satellitedata.source,
-                                 transform)
-    massflux.__setattr__("fitted_plumeline", _pline)
-
-    # Create line
-    plume_ds = 2.5
-
-    # extract points along plume line at plume_ds
-    dataline = get_plumepoints_slope(massflux.fitted_plumeline, transform, ds=plume_ds, plume_len_km=50)
-    # this is done as dataline is a dict and massflux is a container
-    for key, value in dataline.items():
-        massflux.__setattr__(key, value)
-
-    # Transform lat-lon of satellite
-    xx, yy = transform.latlon2xykm(satellitedata.lat, satellitedata.lon)
-    satellitedata.__setattr__("xkm", xx)
-    satellitedata.__setattr__("ykm", yy)
-
-    # Define transaction lines
-    tlines = get_tlines(massflux, satellitedata.co_column_corr, satellitedata.xkm,
-                        satellitedata.ykm, transform, 80)
-    massflux.__setattr__("tlines", tlines)
-
-    # Filter based on background
-    _ed = min(20, len(tlines))
-    lines_total = 0
-    for _ln in tlines[:_ed]:
-        lines_total += _ln.f_background_good
-    if lines_total > 5:
-        massflux.__setattr__("f_good_plume_bs", True)
-    else:
-        massflux.__setattr__("f_good_plume_bs", False)
-
-    return massflux
-
-
 def get_constant_plume_height(injectionht, tlines, topology):
     """get_constant_plume_height _summary_
 
@@ -174,19 +120,13 @@ def get_varying_plume_height(massflux, particles):
         if _ln.f_background_good:
             # Compute height of to compute velocity field
             coords = _ln.final_coords_deg.copy()
-            all_hts, ht_tline = particles_height_at_tlines(
-                coords, particles[particles.vert_id == 1], False
-            )
+            all_hts, ht_tline = particles_height_at_tlines(coords, particles[particles.vert_id == 1], False)
             _ln.__setattr__("varying_plume_ht", ht_tline)
 
-            all_hts, ht_tline = particles_height_at_tlines(
-                coords, particles[particles.vert_id == 0], False
-            )
+            all_hts, ht_tline = particles_height_at_tlines(coords, particles[particles.vert_id == 0], False)
             _ln.__setattr__("varying_plume_ht_m500", ht_tline)
 
-            all_hts, ht_tline = particles_height_at_tlines(
-                coords, particles[particles.vert_id == 2], False
-            )
+            all_hts, ht_tline = particles_height_at_tlines(coords, particles[particles.vert_id == 2], False)
             _ln.__setattr__("varying_plume_ht_p500", ht_tline)
             if np.isnan(_ln.varying_plume_ht):
                 _ln.__setattr__("f_lineparticle_plume_alignment", False)
@@ -206,7 +146,7 @@ def emission_estimates_varying_ht(massflux, flow):
     flag3 = 0
     for _ln in massflux.tlines[:_ed]:
         # If the difference between two sides is not high then continue
-        if _ln.f_background_good and _ln.f_lineparticle_plume_alignment:
+        if _ln.flag_background_good and _ln.f_lineparticle_plume_alignment:
             # To compute emissions: create a factoer
             fact_emis = _ln.final_co * 28.01 * 0.001 * _ln.ds
             # compute velocity at plume height from Lagrangian simulation

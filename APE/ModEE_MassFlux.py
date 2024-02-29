@@ -12,7 +12,6 @@ import h5py
 from netCDF4 import Dataset
 import numpy as np
 import pandas as pd
-# from scipy import interpolate
 
 from scipy.interpolate import NearestNDInterpolator as n_int
 from scipy.interpolate import RegularGridInterpolator as RGI
@@ -25,6 +24,7 @@ from shapely.geometry import LineString
 from skimage.morphology import skeletonize
 
 from .ModuleRefineGrids import RefineGridsUniform
+from .ModuleDataContainers import DataContainer
 
 
 ##################################################################
@@ -156,7 +156,7 @@ def get_plumepoints_slope(_line, trans, ds=2.5, plume_len_km=50):
     total_len_km = np.minimum(dist_tot, plume_len_km)
     # minimum number of theoritical points possible
     _min_pts = total_len_km / ds
-    #
+    # convert lat-lon data to xy
     ll = np.zeros_like(_line)
     ll[:, 0], ll[:, 1] = trans.latlon2xykm(_line[:, 0], _line[:, 1])
     # Decide on number of points
@@ -166,142 +166,64 @@ def get_plumepoints_slope(_line, trans, ds=2.5, plume_len_km=50):
     # Create Linestring
     _lxy = LineString(tuple(map(tuple, ll)))
     # Get values at given ds
-    splitter = [_lxy.interpolate(i * ds) for i in range(1, n + 1)]
+    plumeline_xy = [_lxy.interpolate(i * ds) for i in range(1, n + 1)]
     pts = np.zeros((2, n))
     for ii in range(n):
-        pts[0, ii], pts[1, ii] = trans.xykm2latlon(splitter[ii].x, splitter[ii].y)
+        pts[0, ii], pts[1, ii] = trans.xykm2latlon(plumeline_xy[ii].x, plumeline_xy[ii].y)
     # Get values to compute slope
-    splitter1 = [_lxy.interpolate(i * ds + 0.1) for i in range(1, n + 1)]
+    plumeline_xy_ds = [_lxy.interpolate(i * ds + 0.1) for i in range(1, n + 1)]
     # compute directional vector and normalize it
     vec_xy = np.zeros((2, n))
     for ii in range(n):
-        vec_xy[0, ii] = splitter1[ii].x - splitter[ii].x
-        vec_xy[1, ii] = splitter1[ii].y - splitter[ii].y
+        vec_xy[0, ii] = plumeline_xy_ds[ii].x - plumeline_xy[ii].x
+        vec_xy[1, ii] = plumeline_xy_ds[ii].y - plumeline_xy[ii].y
     vec_norm = vec_xy / np.linalg.norm(vec_xy, axis=0)
 
     # compute slope
     slope = np.zeros((n))
     for ii in range(n):
-        if (splitter1[ii].x - splitter[ii].x) == 0:
+        if (plumeline_xy_ds[ii].x - plumeline_xy[ii].x) == 0:
             slope[ii] = 10000
         else:
-            slope[ii] = (splitter1[ii].y - splitter[ii].y) / (splitter1[ii].x - splitter[ii].x)
+            slope[ii] = (plumeline_xy_ds[ii].y - plumeline_xy[ii].y) / (plumeline_xy_ds[ii].x - plumeline_xy[ii].x)
 
-    line_dist = (np.arange(n) + 1) * 2.5
+    line_dist = (np.arange(n) + 1) * ds
     _dataline = {
         "plumeline": pts,
-        "plumeslope": slope,
         "dist_from_src": line_dist,
         "direction_vector": vec_norm,
-        "spacing": ds,
     }
-    return _dataline
+    return _dataline, LineString(plumeline_xy)
 
 
 ##################################################################
 # Define Transaction line
 ##################################################################
+
+def get_transactionline(n, ds, no_pts_one_side, pline):
+    length_side = no_pts_one_side*ds
+    m = np.int_(2*no_pts_one_side + 1)
+    m1 = no_pts_one_side
+    line_pts = np.zeros((n, m, 2))
+    for i in range(m1):
+        left = pline.parallel_offset(ds*(i+1), "left")
+        right = pline.parallel_offset(ds*(i+1), "right")
+        line_pts[:, m1, :] = np.array(pline.coords)
+        dxl = left.length/(n-1)
+        dxr = right.length/(n-1)
+        for j in range(n):
+            line_pts[j, m1-1-i, :] = np.array(left.interpolate((j) * dxl).coords)[0]
+            # line_pts[j, m1+1+i, :] = np.array(right.interpolate((n-1-j) * dxr).coords)[0]
+            line_pts[j, m1+1+i, :] = np.array(right.interpolate((j) * dxr).coords)[0]
+    return line_pts, np.arange(-length_side, length_side+1, ds)
+
+
 def get_co_interpolation(lat, lon, co):
     # Interpolate function for CO
     return n_int((lat.ravel(), lon.ravel()), co.ravel())
 
 
-class TransactionLine:
-    """
-    Creates a transaction line perpendicular to plume line
-    Parameters
-    -----------
-    origin : 1d array of size 2
-    dist_from_src : Distance in km from source
-    slope : Slope 'a' of the line (ax + b)
-    spacing : spacing between two points on transaction line
-              In mts
-    nos : Number of points on one side of the transaction line.
-          Total number of points will be 2*nos + 1
-    trans : Trans is class that transforms lat-lon to xy and vice-versa
-    a_vect : This is directional vector that is used to align velocity
-
-    """
-
-    def __init__(self, origin, dist_from_src, slope, spacing, nos, trans, a_vect):
-        self.dist_from_src = dist_from_src
-        self.pre_origin = origin
-        self.coeffs = self.__get_coeffs(slope)
-        self.ds = spacing
-        self.nos = nos
-        self.trans = trans
-        self.dir_vect = a_vect
-        # variables that are stored during simulations
-        self.pre_coords_deg = np.zeros((self.nos * 2 + 1, 2))
-        self.pre_coords_xy = np.zeros((self.nos * 2 + 1, 2))
-        # Create a polyfit and a polynomial equation
-        self.poly = np.poly1d(self.coeffs)
-        self.get_line()
-
-    def __get_coeffs(self, slope):
-        # define b and return coefficients for creating line
-        b = self.pre_origin[0] - slope * self.pre_origin[1]
-        return np.array([slope, b])
-
-    def get_line(self, spacing=0.5):
-        """
-        Create transaction line at given point from the coefficients
-        spacing : This is given in degrees, the extent of line that
-                  is possible in degrees
-        """
-        # Set mid point (Origin) and convert it to its corresponding xy
-        self.pre_coords_deg[self.nos, :] = self.pre_origin
-        _xy = self.trans.latlon2xymts(self.pre_origin[0], self.pre_origin[1])
-        self.pre_coords_xy[self.nos, :] = _xy
-        # Right side of line
-        st_ln = self.pre_origin[1] - spacing
-        st_lt = self.poly(st_ln)
-        pl_lat = np.array([self.pre_origin[0], st_lt])
-        pl_lon = np.array([self.pre_origin[1], st_ln])
-        _pts_tmp, _deg_tmp = self.get_pts(pl_lat, pl_lon)
-        self.pre_coords_deg[: self.nos, 0] = np.flip(_deg_tmp[:, 0])
-        self.pre_coords_deg[: self.nos, 1] = np.flip(_deg_tmp[:, 1])
-        self.pre_coords_xy[: self.nos, 0] = np.flip(_pts_tmp[:, 0])
-        self.pre_coords_xy[: self.nos, 1] = np.flip(_pts_tmp[:, 1])
-        # left side of line
-        en_ln = self.pre_origin[1] + spacing
-        en_lt = self.poly(en_ln)
-        pl_lat = np.array([self.pre_origin[0], en_lt])
-        pl_lon = np.array([self.pre_origin[1], en_ln])
-        __xy, __latlon = self.get_pts(pl_lat, pl_lon)
-        self.pre_coords_xy[self.nos + 1:] = __xy
-        self.pre_coords_deg[self.nos + 1:] = __latlon
-        # convert mts to kms
-        self.pre_coords_xy /= 1000
-
-    def get_pts(self, pl_lat, pl_lon):
-        """
-        Split the line into number of points (nos) based on two points
-        Input:
-        ------
-        pl_lat : array of two points in deg
-        pl_lon : array of two points in deg
-
-        Returns:
-        --------
-        _pts : Array of size (nos,2) in mts
-        _deg : Array of size (nos,2) in deg
-        """
-        x_mt, y_mt = self.trans.latlon2xymts(pl_lat, pl_lon)
-        # Create Linestring
-        _lxy = LineString([(x_mt[0], y_mt[0]), (x_mt[1], y_mt[1])])
-        # Get values at given ds
-        _split = [_lxy.interpolate(i * self.ds) for i in range(1, self.nos + 1)]
-        _pts = np.zeros((self.nos, 2))
-        _deg = np.zeros((self.nos, 2))
-        for ii in range(self.nos):
-            _pts[ii, 0] = _split[ii].x
-            _pts[ii, 1] = _split[ii].y
-            _deg[ii, 0], _deg[ii, 1] = self.trans.xymts2latlon(_split[ii].x, _split[ii].y)
-        return _pts, _deg
-
-
-class InterpolateTransactionLines:
+class InterpolateConcToTransactionLines:
     def __init__(self, co_edit, x_km, y_km):
         self.co_edit = co_edit
         self.x_km = x_km
@@ -372,30 +294,28 @@ def get_center_and_cutoff_index(ydata, limit=10):
     return nos, [nos - _idx1, nos + _idx2 + 1]
 
 
-def get_tlines(plume, co_column, sat_xkm, sat_ykm, trans, nos, spacing=500):
+def get_tlines(plume, pline_xy, co_column, sat_xkm, sat_ykm, trans):
     """
     Compute transaction lines and remove background
     """
+    nos = plume.line_nopoints
     # Initialize IDW interpolation class
-    interp = InterpolateTransactionLines(co_column.copy(), sat_xkm.copy(), sat_ykm.copy())
+    interp = InterpolateConcToTransactionLines(co_column.copy(), sat_xkm.copy(), sat_ykm.copy())
+    
+    nn = plume.plumeline.shape[1]
+    line_pts, xdata = get_transactionline(nn, plume.line_spacing_km, plume.line_nopoints, pline_xy)
 
-    xdata = np.arange(-nos, nos + 1) * spacing
     # get interpolation values
     tlines = []
-    for i in range(len(plume.plumeslope)):
-        if plume.plumeslope[i] == 0:
-            _plm = 0.0000001
-        else:
-            _plm = plume.plumeslope[i]
-        _ln = TransactionLine(
-            plume.plumeline[:, i],
-            plume.dist_from_src[i],
-            -1 / _plm,
-            spacing,
-            nos,
-            trans,
-            plume.direction_vector[:, i],
-        )
+    for i in range(nn):
+        _ln = DataContainer()
+        # xy pre-coordinates
+        setattr(_ln, "pre_coords_xy", line_pts[i,:,:])
+        # deg coordinates
+        lat, lon = trans.xykm2latlon(line_pts[i,:,0], line_pts[i,:,1])
+        setattr(_ln, "pre_coords_deg", np.column_stack((lat,lon)))
+        setattr(_ln, "km_from_src", (i+1)*plume.transectspacing_km)
+        setattr(_ln, "dir_vect", plume.direction_vector[:, i])
         # compute pre_co
         pre_co = interp.interpolate(_ln.pre_coords_xy)
         if np.sum(np.isnan(pre_co[nos - 10: nos + 10])) > 10:
@@ -411,17 +331,9 @@ def get_tlines(plume, co_column, sat_xkm, sat_ykm, trans, nos, spacing=500):
             _ln.__setattr__("line_dist", xdata[idx[0]: idx[1]] - xdata[c_id])
             _ln.__setattr__("coords_deg", _ln.pre_coords_deg[idx[0]: idx[1]])
             _ln.__setattr__("coords_xy", _ln.pre_coords_xy[idx[0]: idx[1]])
-            # Remove background and create new variables
+            # Remove background and check if the background removed conc is above zero
             remove_background(_ln)
-            if _ln.f_background_good:
-                eid = emission_indices(_ln.line_dist, _ln.back_removed_co)
-                if len(_ln.back_removed_co[eid]) > 0:
-                    _ln.__setattr__("final_co", _ln.back_removed_co[eid])
-                    _ln.__setattr__("final_line_dist", _ln.line_dist[eid])
-                    _ln.__setattr__("final_coords_deg", _ln.coords_deg[eid, :])
-                    _ln.__setattr__("final_coords_xy", _ln.coords_xy[eid, :])
-                else:
-                    _ln.f_background_good = False
+            # append the line to transaction line
             tlines.append(_ln)
     return tlines
 
@@ -465,21 +377,86 @@ def remove_background(_ln, diff=0.15):
     y11 = _ln.co.copy()
     x1, y1 = pad_arrays(x11.copy(), y11.copy(), 20)
 
+    # set default flag to False and set true later if background removal is successful
+    setattr(_ln, "flag_backgroundremovalsuccess", False)
+    
     # IF the difference between two sides is not high then continue
     if abs(y1[0] - y1[-1]) / np.max(y1) < diff:
-        _ln.__setattr__("f_background_good", True)
         _params = np.zeros((6))
         _params[0] = (y1[0] - y1[-1]) / np.max(y1)
         # fit a gaussian curve and compute background removed CO
         _params[1:], yfit1 = fit_things(x1, y1, [])
-        _ln.__setattr__("gaussfit_x", x1)
-        _ln.__setattr__("gaussfit_co", yfit1)
         ynew_back_removed = y11 - (_params[1] + _params[2] * x11)
-        _ln.__setattr__("gaussfit_params", _params)
-        _ln.__setattr__("back_removed_co", ynew_back_removed)
-    else:
-        _ln.__setattr__("f_background_good", False)
+        # store gaussian fit values
+        setattr(_ln, "gaussfit_x", x1)
+        setattr(_ln, "gaussfit_co", yfit1)
+        setattr(_ln, "gaussfit_params", _params)
+        setattr(_ln, "back_removed_co", ynew_back_removed)
+        
+        # Get indices of background removed conc is greater than zero
+        eid = emission_indices(_ln.line_dist, _ln.back_removed_co)
+        if len(_ln.back_removed_co[eid]) > 0:
+            setattr(_ln, "final_co", _ln.back_removed_co[eid])
+            setattr(_ln, "final_line_dist", _ln.line_dist[eid])
+            setattr(_ln, "final_coords_deg", _ln.coords_deg[eid, :])
+            setattr(_ln, "final_coords_xy", _ln.coords_xy[eid, :])
+            setattr(_ln, "flag_backgroundremovalsuccess", True)
+        
 
+
+##################################################################
+# Compute transaction lines
+##################################################################
+
+def create_tlines_remove_background(satellitedata, plumecontainer, transform):
+    """_summary_
+
+    Args:
+        firecontainer (_type_): _description_
+        plumecontainer (_type_): _description_
+        transform (_type_): _description_
+        particles (_type_): _description_
+        flow (_type_): _description_
+    """
+    massflux = DataContainer()
+
+    # Plume and transaction lines
+    _pline = compute_medial_line(
+        satellitedata.lat_nodes, satellitedata.lon_nodes, plumecontainer.plumemask, satellitedata.source, transform
+    )
+    massflux.__setattr__("fitted_plumeline", _pline)
+
+    # Create line
+    setattr(massflux, "transectspacing_km", 2.5)
+    
+    # extract points along plume line at plume_ds
+    dataline, plumeline_xy = get_plumepoints_slope(massflux.fitted_plumeline, transform, ds=massflux.transectspacing_km, plume_len_km=50)
+    # this is done as dataline is a dict and massflux is a container
+    for key, value in dataline.items():
+        massflux.__setattr__(key, value)
+
+    # Transform lat-lon of satellite
+    xx, yy = transform.latlon2xykm(satellitedata.lat, satellitedata.lon)
+    satellitedata.__setattr__("xkm", xx)
+    satellitedata.__setattr__("ykm", yy)
+
+    # set transect attributes
+    setattr(massflux, "line_spacing_km", 0.5)
+    setattr(massflux, "line_nopoints", 80)
+
+    # Define transaction lines and remove background
+    tlines = get_tlines(massflux, plumeline_xy, satellitedata.co_column_corr, satellitedata.xkm, satellitedata.ykm, transform)
+    massflux.__setattr__("tlines", tlines)
+
+    # Filter plume based on background of individual lines and set a flag
+    setattr(massflux, "flag_goodplume", False)
+    _ed = min(20, len(tlines))
+    lines_total = 0
+    for _ln in tlines[:_ed]:
+        lines_total += _ln.flag_backgroundremovalsuccess
+    if lines_total > 5:
+        setattr(massflux, "flag_goodplume", True)
+    return massflux
 
 ##################################################################
 # Curve fitting

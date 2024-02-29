@@ -20,6 +20,13 @@ except ImportError:
 
 
 class InputParameters:
+    """Class containing input parameters.
+
+    Defines directories, types of sources,
+    and all that is in the input yaml file.
+
+    """
+
     def __init__(self, filename):
         # open file
         try:
@@ -32,7 +39,7 @@ class InputParameters:
         _f = safe_load(fl)
 
         # get days to run simulation
-        self.days = self.get_days(_f)
+        self.days = self._get_days(_f)
         # Satellite and output directories
         self.satellite_dir = _f["SatelliteDir"]
         self.output_dir = _f["OutputDir"]
@@ -40,12 +47,12 @@ class InputParameters:
 
         # Fire parameters
         if _f["Source"] == "Fire":
-            self.init_fireparams(_f["Fire"])
+            self._init_fireparams(_f["Fire"])
             self.output_file_prefix = self.output_dir + self.file_prefix
-            
+
         # Industrial sources
         if _f["Source"] == "Industrial":
-            self.init_industrialparams(_f["Industrial"])
+            self._init_industrialparams(_f["Industrial"])
             self.output_file = self.output_dir + self.file_prefix
 
         # Get all satellite files in the folder and orbits
@@ -55,10 +62,10 @@ class InputParameters:
         self.detectplume = _f["PlumeDetection"]["Flag"]
 
         # Emission estimation
-        self.estimateemission = self.init_emissionestimation(_f["EmissionEstimation"])
+        self.estimateemission = self._init_emissionestimation(_f["EmissionEstimation"])
         fl.close()
 
-    def init_emissionestimation(self, _em):
+    def _init_emissionestimation(self, _em):
         """Initialize emission estimation variables.
 
         Parameters
@@ -73,6 +80,10 @@ class InputParameters:
         """
         emis = DataContainer()
         emis.flag = _em["Flag"]
+        # If the emission flag is false
+        if not emis.flag:
+            return emis
+        emis.molarmass = _em["MolarmassGas"]
         emis.method = _em["Method"]
         if emis.method == "CFM":
             _em1 = _em["CFM"]
@@ -84,7 +95,7 @@ class InputParameters:
             # flow
             emis.flow = Flowinfo(_em1["Flow"])
             # if injection height is given then file to it needed
-            if emis.plumeheight == 'injht':
+            if emis.plumeheight == "injht":
                 emis.injht_dir = _em1["Plumeheight"]["InjectionHeightDir"]
             # if the plume height is varying
             if emis.plumeheighttype == "Varying":
@@ -95,8 +106,9 @@ class InputParameters:
                 # Dispersion parameters
                 emis.param_disp = Dispersion(_sim["Dispersion"])
                 # Particle Release
-                emis.param_partrelease = MultipleParticleRelease(_sim["MultipleParticleRelease"],
-                                                                 emis.param_simtime.sim_time_sec)
+                emis.param_partrelease = MultipleParticleRelease(
+                    _sim["MultipleParticleRelease"], emis.param_simtime.sim_time_sec
+                )
                 # Particle Splitting
                 emis.param_partsplit = ParticleSplitting(_sim["ParticleSplitting"])
                 # Trajectory data to concentration
@@ -109,7 +121,7 @@ class InputParameters:
             emis.plumeheightfromsurface = _em1["HeightFromSurface"]
         return emis
 
-    def get_days(self, _date):
+    def _get_days(self, _date):
         """List all days
 
         Get all days from start date to end date
@@ -144,7 +156,7 @@ class InputParameters:
             stdate += timedelta(days=1)
         return days
 
-    def init_fireparams(self, _fire):
+    def _init_fireparams(self, _fire):
         """Create fire parameters
 
         Fire parameters from the input dict
@@ -162,18 +174,18 @@ class InputParameters:
         self.file_prefix = self.roi_name
         self.source_loc = ""
         self.source_name = ""
-        
-    def init_industrialparams(self, _ind):
+
+    def _init_industrialparams(self, _ind):
         """Create Industrial parameters.
 
-          Industrial parameters from he input dict
+        Industrial parameters from he input dict
 
-          Parameters
-          ----------
-          _ind : Dict
-              Dict containing data
+        Parameters
+        ----------
+        _ind : Dict
+            Dict containing data
 
-         """
+        """
         self.source_loc = array(_ind["Source"])
         self.source_name = _ind["Source_name"]
         self.transform = TransformCoords([self.source_loc[0], self.source_loc[1]])

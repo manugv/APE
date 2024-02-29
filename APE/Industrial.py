@@ -9,9 +9,8 @@ Created on Wed Jun  8 16:00:00 2023.
 # import warnings
 # warnings.simplefilter('error', RuntimeWarning)
 
-
 try:
-    from .ModuleInitialParameters import InputParameters
+    from numpy import concatenate, nanmean
     from .ModuleDataContainers import DataContainer
     from .ModDataPrepare_SatelliteIndentifyOrbits import get_orbits_on_locations
     from .ModDataPrepare_SatelliteRead import readsatellitedata
@@ -19,13 +18,12 @@ try:
     from .ModPlume_Detection import segment_image_plume
     from .ModuleWrite import WriteData
     from .ModuleRead import ReadData
-    from .ModEE_ComputeEmissions import crosssectionalflux
+    from .ModEE_CrossSectionalFlux import crosssectionalflux
     from .ModEE_Divergence import creategrid_divergence, divergence
-    from .ModCheckDownloadVelocity import checkanddownloadvelocity
-    import numpy as np
 except ImportError:
     print("Module loading failed")
     exit()
+
 
 def saveplumedetectiondata(params, day, satdata, plumedata, writedata):
     """Save parameters after plume detection.
@@ -67,6 +65,7 @@ def datapreparationperday(day, params):
     """
     # dump extracted data per day
     data = DataContainer()
+    # setattr(data, "extracteddata", [])
     data.__setattr__("extracteddata", [])
     # loop over all orbits for the day
     data.__setattr__("goodcases", 0)
@@ -100,6 +99,19 @@ def datapreparationperday(day, params):
 
 
 def preprocessdata(params, writedata=None):
+    """Preprocess data.
+
+    From location, satellite orbit for given inputs is determined
+    and satellite data is extracted based on its quality.
+
+    Parameters
+    ----------
+    params : InputParameters Class
+        Parameters containing the inputs
+    writedata : Writedata class
+        Class to write data
+
+    """
     # Initialize a file to write data
     if writedata is None:
         writedata = WriteData(params.output_file)
@@ -120,6 +132,20 @@ def preprocessdata(params, writedata=None):
 
 
 def computedivergence(params, writedata=None):
+    """Compute divergence based on input parameters.
+
+    Reads the extracted satellite data and the downloaded velocity
+    to compute the divergence of the scene. The divergence is returned
+    but not the emission.
+
+    Parameters
+    ----------
+    params : InputParameters Class
+        Parameters containing the inputs
+    writedata : Writedata class
+        Class to write data
+
+    """
     # Initialize a file to read data
     _readdata = ReadData(params.output_file, params.days)
     # Initialize a file to write data
@@ -138,102 +164,127 @@ def computedivergence(params, writedata=None):
         if temporaldivergencedata is None:
             temporaldivergencedata = divergencedata.div[None, :, :]
         else:
-            temporaldivergencedata = np.concatenate((temporaldivergencedata, [divergencedata.div]))
+            temporaldivergencedata = concatenate((temporaldivergencedata, [divergencedata.div]))
     # estimate emission by thresholding
     # TODO: Add function to compute massflux
-    meandivergence = np.nanmean(temporaldivergencedata, axis=0)
+    meandivergence = nanmean(temporaldivergencedata, axis=0)
     return meandivergence, temporaldivergencedata
 
 
 def detectplume(params, writedata=None):
+    """Plume detection based on input parameters.
+
+    Reads good satellite data and extractes plume based plume detection algorithm.
+
+    Parameters
+    ----------
+    params : InputParameters Class
+        Parameters containing the inputs
+    writedata : Writedata class
+        Class to write data
+
+    """
     # Initialize a file to read data
     _readdata = ReadData(params.output_file, params.days)
-    # data to read
-    datatoread = ["Satellite"]
     # Initialize a file to write data
     if writedata is None:
         writedata = WriteData(params.output_file)
     for _key in _readdata.keys:
-        data = _readdata.read(_key, datatoread)
-        plumecontainer = segment_image_plume(data.lat, data.lon, data.co_column_corr,
-                                             data.co_qa_mask, params.transform)
-        writedata.write_plumedata(_key, plumecontainer)
+        print(_key)
+        data = _readdata.satellite(_key)
+        plumecontainer = segment_image_plume(data.lat, data.lon, data.co_column_corr, data.co_qa_mask, params.transform)
+        writedata.plume(_key, plumecontainer)
 
 
-def estimatecfmemission(params):
-    # Initialize a file to read data
-    _readdata = ReadData(params.output_file, params.days)
-    # data to read
-    datatoread = ["Satellite", "Plume"]
-    # Initialize a file to write data
-    writedata = WriteData(params.output_file)
-    for _key in _readdata.keys:
-        data, plumecont = _readdata.read(_key, datatoread)
-        massflux = crosssectionalflux(params, data, plumecont, params.transform)
-        writedata.write_cfm(massflux)
+def estimatecfmemission(params, writedata):
+    """Compute emission based cross-sectional flux.
 
-
-
-def run(filename):
-    """Industrial source for an given input.
+    Reads the extracted satellite data and the downloaded velocity
+    to compute the divergence of the scene. The divergence is returned
+    but not the emission.
 
     Parameters
     ----------
-    filename : string
-        Filename
-
-    Examples
-    --------
-    filename = "input.yaml"
-    run_industrial(filename)
+    params : InputParameters Class
+        Parameters containing the inputs
+    writedata : Writedata class
+        Class to write data
 
     """
-    # Read input file
-    params = InputParameters(filename)
+    # Initialize a file to read data
+    _readdata = ReadData(params.output_file, params.days, onlyplumes=True)
     # Initialize a file to write data
-    writedata = WriteData(params.output_file)
+    if writedata is None:
+        writedata = WriteData(params.output_file)
 
-    # prepare data prepare
-    preprocessdata(params)
+    for _key in _readdata.keys:
+        print("Computing emissions for:", _key)
+        data = _readdata.satellite(_key)
+        plumecont = _readdata.plume(_key)
+        massflux, estd_emission = crosssectionalflux(params, data, plumecont, params.transform)
+        print("       computed")
+        writedata.write_cfm(_key, massflux)
 
-    # if emission estimation is Divergence method
-    # this doesn't need plume detection
-    if (params.estimateemission.flag) & (params.estimateemission.method == "Divergence"):
-        # download velocity fields
-        checkanddownloadvelocity(params)
-        # compute divergence
-        return computedivergence(params)
+# def run(filename):
+#     """Industrial source for an given input.
 
-    # if plume detection is true
-    # if not params.detectplume:
-    #     return None
+#     Parameters
+#     ----------
+#     filename : string
+#         Filename
 
-    # emission estimates
-    if (params.estimateemission.flag) & (params.estimateemission.method == "CFM"):
-        # Initialize a file to read data
-        _readdata = ReadData(params.output_file, params.days)
-        # data to read
-        datatoread = ["Satellite"]
-        for _key in _readdata.keys:
-            data = _readdata.read(_key, datatoread)
-            plumecontainer = segment_image_plume(data.lat, data.lon, data.co_column_corr,
-                                                 data.co_qa_mask, params.transform)
-            writedata.write_plumedata(plumecontainer)
-            # check if plume was not detected
-            if not plumecontainer.flag_plumedetected:
-                continue
-            # download velocity fields
-            checkanddownloadvelocity(_key)
-            # plume was detected
-            massflux = crosssectionalflux(params, data, plumecontainer, params.transform)
-            # writedata.write_cfm(massflux)
-            # TODO: Add variable to define individual emission
-            try:
-                cfm.append([massflux.emission, data.measurement_time, data.orbit])
-            except NameError:
-                cfm = [massflux.emission, data.measurement_time, data.orbit]
-        return cfm
-    else:
-        # only detect plumes
-        detectplume(params, writedata)
-        return None
+#     Examples
+#     --------
+#     filename = "input.yaml"
+#     run_industrial(filename)
+
+#     """
+#     # Read input file
+#     params = InputParameters(filename)
+#     # Initialize a file to write data
+#     writedata = WriteData(params.output_file)
+
+#     # prepare data prepare
+#     preprocessdata(params)
+
+#     # if emission estimation is Divergence method
+#     # this doesn't need plume detection
+#     if (params.estimateemission.flag) & (params.estimateemission.method == "Divergence"):
+#         # download velocity fields
+#         checkanddownloadvelocity(params)
+#         # compute divergence
+#         return computedivergence(params)
+
+#     # if plume detection is true
+#     # if not params.detectplume:
+#     #     return None
+
+#     # emission estimates
+#     if (params.estimateemission.flag) & (params.estimateemission.method == "CFM"):
+#         # Initialize a file to read data
+#         _readdata = ReadData(params.output_file, params.days)
+#         # data to read
+#         datatoread = ["Satellite"]
+#         for _key in _readdata.keys:
+#             data = _readdata.read(_key, datatoread)
+#             plumecontainer = segment_image_plume(data.lat, data.lon, data.co_column_corr,
+#                                                  data.co_qa_mask, params.transform)
+#             writedata.write_plumedata(plumecontainer)
+#             # check if plume was not detected
+#             if not plumecontainer.flag_plumedetected:
+#                 continue
+#             # download velocity fields
+#             checkanddownloadvelocity(_key)
+#             # plume was detected
+#             massflux = crosssectionalflux(params, data, plumecontainer, params.transform)
+#             # writedata.write_cfm(massflux)
+#             # TODO: Add variable to define individual emission
+#             try:
+#                 cfm.append([massflux.emission, data.measurement_time, data.orbit])
+#             except NameError:
+#                 cfm = [massflux.emission, data.measurement_time, data.orbit]
+#         return cfm
+#     else:
+#         # only detect plumes
+#         detectplume(params, writedata)
+#         return None

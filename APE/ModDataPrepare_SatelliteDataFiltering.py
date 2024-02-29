@@ -205,7 +205,6 @@ def filter_good_data(co_mask, qa_value):
         True if good data.
 
     """
-    breakpoint()
     # mask further bad values
     _co1 = np.zeros_like(co_mask)
     _co1[:, :] = co_mask[:, :]

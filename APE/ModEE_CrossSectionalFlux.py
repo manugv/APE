@@ -7,14 +7,15 @@ Created on Wed Sept  8 16:11:59 2023.
 """
 
 from .ModEE_Simulation import Simulation3d
-from .ModEE_EmissionEstimate import (create_tlines_remove_background,
-                                     get_constant_plume_height,
-                                     get_varying_plume_height,
-                                     emission_estimates_varying_ht,
-                                     emission_estimates_const_ht)
+from .ModEE_MassFlux import create_tlines_remove_background
+from .ModEE_EmissionEstimate import (
+    get_constant_plume_height,
+    get_varying_plume_height,
+    emission_estimates_varying_ht,
+    emission_estimates_const_ht,
+)
 from .ModEE_VelocityInterpolation2d import VelocityInterpolation
 from .ModuleDataContainers import DataContainer
-from .ModEE_Divergence import regrid_and_interpolate, computedivergence
 from numpy import nanmean, nansum, sqrt
 
 
@@ -28,46 +29,36 @@ def _velocityacrosstransect(coords, dir_vect, flow):
     return flag, vel_mag, u, v
 
 
-def _emissionoftransect(_ln, flow):
-    co_molarmass = 0.02801  # kg/mol
+def _emissionoftransect(_ln, ds_km, flow, molarmass):
     emis = DataContainer()
     # To compute emissions create a factor
-    fact_emis = _ln.final_co * (co_molarmass * _ln.ds)
+    fact_emis = _ln.final_co * (ds_km*1000) * molarmass
     # compute velocity at the constant height
     flag, vel_mag, u, v = _velocityacrosstransect(_ln.final_coords_deg, _ln.dir_vect, flow)
-    emis.__setattr__("u", u)
-    emis.__setattr__("v", v)
-    emis.__setattr__("velmag", vel_mag)
-    emis.__setattr__("flag_velocitylessthan2", flag)
+    setattr(emis, "u", u)
+    setattr(emis, "v", v)
+    setattr(emis, "velmag", vel_mag)
+    setattr(emis, "flag_velocitylessthan2", flag)
     if not emis.flag_velocitylessthan2:
-        emis.__setattr__("lineemission", fact_emis*emis.velmag)
-        emis.__setattr__("emission", nansum(emis.lineemission))
+        setattr(emis, "lineemission", fact_emis * emis.velmag)
+        setattr(emis, "emission", nansum(emis.lineemission))
     return emis
 
 
-def _estimateemissionconst(massflux, flow, var_name):
+def _estimateemissionconst(massflux, flow, var_name, molarmass):
     # the transaction lines
     _ed = min(20, len(massflux.tlines))
     emission = []
     for _ln in massflux.tlines[:_ed]:
         # If the difference between two sides is not high then continue
-        if _ln.f_background_good:
+        if _ln.flag_backgroundremovalsuccess:
             # compute emissions over a line
-            emis = _emissionoftransect(_ln, flow)
-            _ln.__setattr__(var_name, emis)
-            if emis.velocitylessthan2:
+            emis = _emissionoftransect(_ln, massflux.line_spacing_km, flow, molarmass)
+            setattr(_ln, "emission_"+var_name, emis)
+            if emis.flag_velocitylessthan2:
                 continue
             emission.append(emis.emission)
     return emission
-
-
-
-def emission_constantheight(paramee, massflux, _time):
-    # check for velocity field at given height and get flow classmethod
-    flow = VelocityInterpolation(paramee.flow.inputdir, paramee.plumeheight)
-    flow.computefunction(_time)
-    # compute emissions based on interpolations at the transaction lines
-    return _estimateemissionconst(massflux, flow, paramee.emisname)
 
 
 def emission_varyingheight(massflux, origin_src, transform, sources, paramee, measurement_time, unique_id):
@@ -76,7 +67,7 @@ def emission_varyingheight(massflux, origin_src, transform, sources, paramee, me
     if massflux.f_good_plume_bs:
         sim3d = Simulation3d(origin_src, transform, paramee, sources, measurement_time)
         sim3d.run()
-        simname = (paramee.particledir + unique_id)
+        simname = paramee.particledir + unique_id
         sim3d.save(simname)
 
         # compute varying plume height and its emissions
@@ -96,23 +87,35 @@ def crosssectionalflux(params, satellitedata, plumedata, transform, sources=None
     # Create transaction lines and remove background
     massflux = create_tlines_remove_background(satellitedata, plumedata, transform)
     # Check if the plume was good after background subtraction
-    if not massflux.f_good_plume_bs:
+    if not massflux.flag_goodplume:
         return massflux, 0
-    # constant plume height and varying plume height
+
+    # constant plume height
     if params.estimateemission.plumeheighttype == "Constant":
-        estimatedemission = emission_constantheight(params.estimateemission, massflux, satellitedata.measurement_time)
+        # get the velocity
+        dirprefix = params.estimateemission.flow.inputdir + params.source_name + "_"
+        wind = VelocityInterpolation(dirprefix, params.estimateemission.plumeheight)
+        wind.computefunction(satellitedata.measurement_time)
+        estimatedemission = _estimateemissionconst(
+            massflux, wind, params.estimateemission.emisname, params.estimateemission.molarmass
+        )
+    # varying plume height
     elif params.estimateemission.plumeheighttype == "Varying":
         if sources is None:
             print("sources input needs to be given")
             exit()
         else:
-            massflux = emission_varyingheight(massflux, satellitedata.source, transform, sources,
-                                              params.estimateemission, satellitedata.measurement_time,
-                                              satellitedata.uniqueid)
+            massflux = emission_varyingheight(
+                massflux,
+                satellitedata.source,
+                transform,
+                sources,
+                params.estimateemission,
+                satellitedata.measurement_time,
+                satellitedata.uniqueid,
+            )
             estimatedemission = 0  # TODO
     return massflux, estimatedemission
-
-
 
 
 #     # Create transaction lines and remove background
