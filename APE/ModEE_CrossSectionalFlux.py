@@ -7,7 +7,7 @@ Created on Wed Sept  8 16:11:59 2023.
 """
 
 from .ModEE_Simulation import Simulation3d
-from .ModEE_MassFlux import create_tlines_remove_background
+from .ModEE_TransactionalLines import create_tlines_remove_background
 from .ModEE_EmissionEstimate import (
     get_constant_plume_height,
     get_varying_plume_height,
