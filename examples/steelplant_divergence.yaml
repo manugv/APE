@@ -18,6 +18,7 @@ PlumeDetection:
   
 EmissionEstimation:
   Flag: True
+  MolarmassGas: 0.02801  # kg/mol for CO
   Method: "Divergence"  # CFM, Divergence
 
   Divergence:
