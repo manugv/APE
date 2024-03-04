@@ -10,6 +10,8 @@ from scipy.interpolate import RegularGridInterpolator
 from netCDF4 import Dataset
 import numpy as np
 from datetime import date, timedelta
+from pathlib import Path
+import cdsapi
 
 
 class InjectionHeight:
@@ -59,7 +61,6 @@ class InjectionHeight:
             (self.lat_deg, self.lon_deg), self.injh, method="nearest"
         )
 
-    @staticmethod
     def correct_longitude(longitude):
         """Convert longitude to 0-360 range.
 
@@ -110,3 +111,43 @@ class InjectionHeight:
             return u
         else:
             print("something went wrong")
+
+
+def download_injectionheight(outputdir, _day, url0, key0):
+    """Download injection height.
+
+    Parameters
+    ----------
+    outputdir : Str
+        Output injection height data
+    _day : Datetime
+        Date from datetime
+    url0 : str
+        ADS API url https://ads.atmosphere.copernicus.eu/api-how-to
+    key0 : str
+        ADS key https://ads.atmosphere.copernicus.eu/api-how-to
+
+    """
+    _date = _day.strftime("%Y-%m-%d")
+    _file = outputdir + _date + ".nc"
+    _file1 = outputdir + _day.strftime("%Y-%m") + ".nc"
+    fl = Path(_file)
+    fl1 = Path(_file1)
+    
+    if fl.exists() or fl1.exists():
+        print(" Injection height data exists")
+    else:
+        print("   Downloading Injection height data")
+        c = cdsapi.Client(url=url0, key=key0)
+        c.retrieve('cams-global-fire-emissions-gfas',
+                   {
+                       'date': _date,
+                       'format': 'netcdf',
+                       'variable': ['altitude_of_plume_bottom', 'altitude_of_plume_top',
+                                    'injection_height', 'mean_altitude_of_maximum_injection',
+                       ],
+                   },
+                   _file)
+        print("                    Downloaded"
+
+        
