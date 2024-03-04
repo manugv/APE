@@ -18,7 +18,7 @@ try:
     from .ModDataPrepare_VIIRSData import get_firedata
     from .ModDataPrepare_SatelliteIndentifyOrbits import get_orbits_on_locations
     from .ModDataPrepare_SatelliteRead import readsatellitedata, get_filenames
-    from .ModDataPrepare_SatelliteDataFiltering import extract_and_filter_satellitedata
+    from .ModDataPrepare_SatelliteDataFiltering import extractfilter_satellitedata
     from .ModuleTransform import TransformCoords
     from .ModuleInjectionHeight import InjectionHeight
     from .ModPlume_Detection import segment_image_plume
@@ -110,17 +110,17 @@ def fireape_plumedetection(satcont, firesrcs, viirsdata):
     plumecontainer = segment_image_plume(satcont.lat, satcont.lon, satcont.co_column_corr,
                                          satcont.co_qa_mask, satcont.transform)
     # Print if plume is segmented or not
-    print(f"        Image segmented : {plumecontainer.f_plumedetect}")
+    print(f"        Image segmented : {plumecontainer.flag_plumedetected}")
 
     # if plume is not detected then break the loop
-    if ~plumecontainer.f_plumedetect:
+    if ~plumecontainer.flag_plumedetected:
         return False, [], []
     # Check for other fires nearby and filter the plume
     # filter for other fires around
     f_plumefilter, firesrcs = filter_good_plumes(satcont, plumecontainer.plumemask,
                                                  firesrcs, viirsdata)
     # Set a variable that there is nofirearoundplume
-    plumecontainer.__setattr__("f_nofirearoundplume", f_plumefilter)
+    plumecontainer.__setattr__("flag_nofirearoundplume", f_plumefilter)
     if f_plumefilter:
         viirscontainer = viirsdata.loc[viirsdata.labels == firesrcs.labels[satcont.fire_id]]
         return f_plumefilter, plumecontainer, viirscontainer
@@ -190,8 +190,8 @@ def saveplumedetectiondata(params, day, satdata, viirsdata, plumedata, writedata
     writedata.write(satdata, viirsdata, plumedata)
 
 
-def datapreparationandplumedetection(day, params, writedata):
-    """Macro function using APE Data processing and Plume detection stage for fires.
+def datapreparation(day, params, writedata):
+    """Macro function using APE Data processing for fires.
 
     Wrappers on APE functions for fires from VIIRS dataset
 
@@ -209,49 +209,59 @@ def datapreparationandplumedetection(day, params, writedata):
     flag : Bool
         If a plume was detected and there is data for the day
     """
+   
     # DATA PREPARATION Step 1 : fire sources
     # read fire data, cluster and corresponding orbits
     # Get clustered VIIRS active fire data
-    dataexists_flag, cluster_flag, viirsdata, firesrcs1 = get_firedata(day, params)
+    flag_firedataexists, flag_dataclustered, viirsdata, firesrcs1 = get_firedata(day, params)
     # If fire cluster/s is/are not present then stop the function for day
-    if ~cluster_flag:
+    if ~flag_dataclustered:   # if False then data  is not clustered so return
         return False, []
     # get satellite orbits for clustered fire data
-    f_orbit, viirsdata, firesrcs = getsatelliteorbitsatfiresrcs(day, params, firesrcs1)
-    if ~f_orbit:   # If there is no orbit data or something failed
+    flag_orbits, viirsdata, firesrcs = getsatelliteorbitsatfiresrcs(day, params, firesrcs1)
+    if ~flag_orbits:   # If there is no orbit data or something failed
         return False, []
     # Create a contanier to read orbit data: Multiple fire sources can exist in same orbit
     # so this container helps to stop re-reading data
     orbitdata = DataContainer()
     orbitdata.__setattr__("orbit", 0)
+
+    # Define the outfile name in write data class
+    writedata.updatefilename(params.output_file + day.strftime("%Y_%m"))
+
     # identify all plume detected labels and return it
     detectedplumefiresources = []
     detectedplumefiretimes = []
-    # loop over all fire sources
+    
+    # loop over all fire sources for the day
     for f_id in range(len(firesrcs)):
-        # read orbit data if the old orbit is not same as new orbit data
+        # read orbit data
         orbitdata = satellitedataoveranorbit(orbitdata, firesrcs.orbits[f_id], params)
+
         # DATA PREPARATION Step 2 : Satellite data
         # Extract satellite data based on fire source
         # source of fire
         src = [firesrcs.latitude[f_id], firesrcs.longitude[f_id]]
         print(f"label:- {firesrcs.labels[f_id]}  fire index:- {f_id}  src:- {src}  orbit:- {firesrcs.orbits[f_id]}")
-        satellitecontainer = extract_and_filter_satellitedata(orbitdata, src)
+        satellitecontainer = extractfilter_satellitedata(orbitdata, src)
         # Give this fire id as plume is detected
         satellitecontainer.__setattr__("fire_name", "Fire_" + str(f_id).zfill(3))
         satellitecontainer.__setattr__("fire_id", f_id)
-        print("      Good satellite data filter: ", satellitecontainer.f_good_satellite_data)
+        print("      Good satellite data filter: ", satellitecontainer.flag_goodsatellitedata)
         print("      Data preparation stage successful and satellite data is available")
-        if ~satellitecontainer.f_good_satellite_data:  # Data preparation has failed
+        if ~satellitecontainer.flag_goodsatellite_data:  # Data preparation has failed
             continue
         # PLUME DETECTION
-        plumeflag, plumecontainer, viirscontainer = fireape_plumedetection(satellitecontainer, firesrcs, viirsdata)
-        if ~plumeflag:  # Plume detection has failed
+        flag_plumefiltered, plumecontainer, viirscontainer = fireape_plumedetection(satellitecontainer, firesrcs, viirsdata)
+        if ~flag_plumefiltered:  # Plume detection has failed
             continue
         detectedplumefiresources.append(satellitecontainer.source)
         detectedplumefiretimes.append(satellitecontainer.measurement_time)
-        # WRITE DATA
-        saveplumedetectiondata(params, day, satellitecontainer, viirscontainer, plumecontainer, writedata)
+        # Write plume data
+        # save data satellite and VIIRS
+        writedata.satellite(satellitedata.uniqueid, satellitecontainer)
+        writedata.viirsdata(satellitedata.uniqueid, viirscontainer)
+        writedata.plume(satellitedata.uniqueid, plumecontainer)
     # plumes were detected or not
     if len(detectedplumefiresources) > 0:
         return True, [detectedplumefiresources, detectedplumefiretimes]
@@ -323,20 +333,20 @@ def emissionestimationfires(day, params, writedata):
         writedata.append_massflux(fire_massfluxcontainer)
 
 
-def run_fire(filename):
-    # Read input file
-    params = InputParameters(filename)
+# def run_fire(filename):
+#     # Read input file
+#     params = InputParameters(filename)
 
-    # Get all satellite files in the folder and orbits
-    params.__setattr__("sat_files", get_filenames(params.satellite_dir))
-    print("Satellite file read done")
+#     # Get all satellite files in the folder and orbits
+#     params.__setattr__("sat_files", get_filenames(params.satellite_dir))
+#     print("Satellite file read done")
 
-    # Initialize a file to write data
-    writedata = WriteData(params.output_file_prefix)
-    # Run APE Algorithm for a day
-    for day in params.days:
-        print(day)
-        flag, dataneededtodownload = datapreparationandplumedetection(day, params, writedata)
-        if flag:
-            cluster_downloaddata(day, dataneededtodownload)
-            emissionestimationfires(day, params, writedata)
+#     # Initialize a file to write data
+#     writedata = WriteData(params.output_file_prefix)
+#     # Run APE Algorithm for a day
+#     for day in params.days:
+#         print(day)
+#         flag, dataneededtodownload = datapreparationandplumedetection(day, params, writedata)
+#         if flag:
+#             cluster_downloaddata(day, dataneededtodownload)
+#             emissionestimationfires(day, params, writedata)
