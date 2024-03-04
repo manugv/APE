@@ -5,11 +5,14 @@ Created on Wed Feb  8 16:00:00 2024.
 
 @author: Arthur B, Manu Goudar
 """
-from .ModuleRead import ReadData
+from .ModuleRead import ReadData, loadplumes
 from pathlib import Path
 import cdsapi
 from datetime import datetime, timedelta
-from numpy import sign 
+from numpy import sign
+import pandas as pd
+from sklearn.cluster import DBSCAN
+
 
 def timefilename_download(_kydatetime, filename):
     """Define date, time, filename to download.
@@ -42,7 +45,7 @@ def timefilename_download(_kydatetime, filename):
     return downloadtime
 
 
-def download_era_pressure(area, filetime_fields, cdsapiurl, cdsapikey):
+def download_pressureleveldata(area, filetime_fields, cdsapiurl, cdsapikey):
     """Download ERA5 pressure data.
 
     Parameters
@@ -157,7 +160,7 @@ def checkanddownloadvelocity(_key, plumeheight, flow, source_name):
             # get area
             area = get_area(_key.split('_')[2])
             # download data
-            download_era_pressure(area, timefile_fields, flow.cdsapiurl, flow.cdsapikey)
+            download_pressureleveldata(area, timefile_fields, flow.cdsapiurl, flow.cdsapikey)
             print("             .....Done")
         else:
             print("        Velocity data exists")
@@ -185,3 +188,207 @@ def checkanddownloadvelocity_alldata(params, onlyplumes=False):
         checkanddownloadvelocity(_ky, params.estimateemission.plumeheight,
                                  params.estimateemission.flow, params.source_name)
         
+
+################################################################################################
+# Fire
+################################################################################################
+
+def clusterpoints(points):
+    """Cluster lat-lon.
+
+    Parameters
+    ----------
+    points : Array(m,2)
+        Array of lat-lon
+
+    """
+    # Apply DBSCAN clustering
+    epsilon = 30  # distance threshold for clustering in deg
+    min_samples = 1  # minimum number of points to form a cluster
+    dbscan = DBSCAN(eps=epsilon, min_samples=min_samples).fit(points)
+    labels = dbscan.labels_
+    # Find unique clusters
+    unique_labels = np.unique(labels)
+    return unique_labels, labels
+
+
+def _getareamodellvl(cl1_latlon, extent_increase=2):
+    min_lat, min_lon = np.min(cl1_latlon, axis=0)
+    max_lat, max_lon = np.max(cl1_latlon, axis=0)
+    return [min_lat - extent_increase, min_lon - extent_increase,
+            max_lat + extent_increase, max_lon + extent_increase]
+
+
+def _get_minmaxtime(cl1_time):
+    cl_time_min = cl1_time.min() - timedelta(hours=7)
+    cl_time_min.replace(minute=0, second=0, microsecond=0)
+
+    cl_time_max = cl1_time.max() + timedelta(hours=1)
+    cl_time_max.replace(minute=0, second=0, microsecond=0)
+    
+    return cl_time_min, cl_time_max
+
+
+def create_listoffiles(fires_id, fires_time, points, unique_labels, labels):
+    """Cluster data to download
+
+    Parameters
+    ----------
+    fires_id : List[Str]
+        Ids of lat-lon
+    fires_time : List[Datatime]
+        Time of lat-lons
+    points : Array (m,2)
+        Lat-lon points
+    unique_labels : Array
+        Unique labels
+    labels : Array(m)
+        Labels from clustering
+
+    Return
+    --------
+    Cluster Dataframe
+
+    """
+    #store plumes per cluster and add required information to csv 
+    area_l  = []
+    cl_id_l = []
+    cl_time_min_l = []
+    cl_time_max_l = []
+    filename_l = []
+    _date = fires_time[0].strftime("%Y%m%d")
+    # get unique labels
+    for _key in unique_labels:
+        cl_id_l.append(fires_id[labels == _key])
+        # lat lon
+        _area = _getareamodellvl(points[labels == _key])
+        area_l.append(_area)
+        # time data
+        cl1_time = fires_time[labels == _key]
+        timemin, timemax = _get_minmaxtime(cl1_time)
+        cl_time_min_l.append(timemin)
+        cl_time_max_l.append(timemax)
+        filename_l.append(_date +"_cl"+ str(_key))
+        
+    cluster = pd.DataFrame()
+    cluster["fires"]=cl_id_l
+    cluster["area"]=area_l
+    cluster['min_time']=cl_time_min_l 
+    cluster['max_time']=cl_time_max_l
+    cluster['filename']=filename_l
+    cluster.to_csv(str(_date) +'_cluster_table.csv')
+    return cluster
+
+
+def _checkdownload_modellvldata(_area, filetime_fields, cdsapiurl, cdsapikey): 
+    """Download ERA5 pressure data.
+
+    Parameters
+    ----------
+    _area : List
+        Retrieve bounds in degrees latitude / longitude [North, West, South, East]
+    filetime_fields : List
+        List containing a list of [year, month, day, time, filename]
+    cdsapiurl: String
+        String containing url from cdsapi : https://cds.climate.copernicus.eu/api-how-to
+    cdsapikey: String
+        String containing string from cdsapi : https://cds.climate.copernicus.eu/api-how-to
+    """
+    c = cdsapi.Client(url=cdsapiurl, key=cdsapikey)
+    for dd in filetime_fields:
+        _file = Path(dd[3]+"_velocity_qt.nc")
+        if not _file.exists():
+            print("   Downloading model level velocity....")
+            c.retrieve('reanalysis-era5-complete',
+                       {'date': dd[0],
+                        'levelist': '80/to/137/by/1',
+                        'levtype': 'ml',
+                        'param': '130/131/132/133/135',
+                        'stream': 'oper',
+                        'time': dd[1],
+                        'type': 'an',
+                        'area': _area,
+                        'grid': '0.25/0.25',
+                        'format': 'netcdf'},
+                       dd[3]+"_velocity_qt.nc")
+        else:
+            print("   Velocity data exists")
+
+        _file1 = Path(dd[3]+"_zlnsp.nc")
+        if not _file1.exists():
+            print("   Downloading model level surface pressure....")
+            c.retrieve('reanalysis-era5-complete',
+                       {'date': dd[0],
+                        'levelist': '1',
+                        'levtype': 'ml',
+                        'param': '129/152',
+                        'stream': 'oper',
+                        'time': dd[1],
+                        'type': 'an',
+                        'area': _area,
+                        'grid': '0.25/0.25',
+                        'format': 'netcdf'},
+                       dd[3]+"_zlnsp.nc")
+        else:
+            print("   Surface pressure data exists")
+
+
+def _check_create_dir(mydir):
+    _path = Path(mydir)
+    if not _path.exists():
+        _path.mkdir(parents=True)
+        
+
+def download_modelleveldata(inputfilename, outputdir, day, cdsapiurl, cdsapikey):
+    """Check for velocity data and download it if required. 
+
+    Downloads the velocity data based on the input.
+
+    Parameters
+    ----------
+    inputfilenaame : string
+        Contains file name of the fire data (output of APE)
+    outputdir : String
+        Output dir for model level data
+    day : Datetime
+        Date from date time
+    cdsapiurl: String
+        String containing url from cdsapi : https://cds.climate.copernicus.eu/api-how-to
+    cdsapikey: String
+        String containing string from cdsapi : https://cds.climate.copernicus.eu/api-how-to
+    """
+    # load data for a day based on input datafile
+    _points, fires_id, fires_time = loadplumes(inputfilename, day)
+
+    # create cluster of firesources for a day
+    unique_labels, labels = clusterpoints(_points)
+    cluster = create_listoffiles(fires_id, fires_time, points, unique_labels, labels)
+
+    # download and check data
+    for i in range(len(cluster)):
+        dd = cluster.loc[i]
+        # create directories if they do not exist
+        new_outdir = outputdir + dd.max_time.strftime("%Y/%m/%d") + "/"
+        _check_create_dir(new_outdir)
+
+        # if measure time is a day before change data 
+        if dd.min_time.day != dd.max_time.day:
+            _date = dd.min_time.strftime("%Y-%m-%d")
+            _time = dd.min_time.strftime("%H")+"/to/23/by/1"
+            d1 = [_date, _time, new_outdir + dd.filename+"_0"]
+
+            _date = dd.max_time.strftime("%Y-%m-%d")
+            _time = "00/to/"+ dd.max_time.strftime("%H")+"/by/1"
+            d2 = [_date, _time, new_outdir + dd.filename+"_1"]
+            filetime_fields = [d1, d2]
+        else:
+            _date = dd.max_time.strftime("%Y-%m-%d")
+            _time = dd.min_time.strftime("%H") + "/to/" + dd.max_time.strftime("%H")+"/by/1"
+            filetime_fields = [[_date, _time, new_outdir + dd.filename]]
+
+        # check if the velocity fields exist or not and download
+        print("   Checking/downloading model level data")
+        _checkdownload_modellvldata(dd.area, filetime_fields, cdsapiurl, cdsapikey)
+        print("                            Done!"
+
+

@@ -88,6 +88,30 @@ class ReadData:
         return data
 
 
+def loadplumes(filename, daykey):
+    points = []
+    fires_id = []
+    fires_time = []
+    f = h5py.File(filename,'r')
+    for key in f.keys():
+        if (key.startswith(daykey) &  f[key]["PlumeDetection"].attrs['f_firearoundplume']):
+            cluster_times_min = f[key+'/Satellite'].attrs["orbit_ref_time"]
+            cluster_fire_deltatime = np.mean(f[key+'/Satellite/deltatime'][:])
+            cluster_fire_source = f[key+'/Satellite'].attrs["source"]
+            latitudes = cluster_fire_source[0]
+            longitudes = cluster_fire_source[1]
+            cluster_times = get_orbit_time(cluster_times_min, cluster_fire_deltatime)
+            file_points = np.column_stack((latitudes, longitudes))
+            points.append(file_points)
+            fires_id.append(key)
+            fires_time.append(cluster_times)
+    if len(points) > 1:
+        oints1 = np.concatenate(points, axis=0)
+    else:
+        points1 = points
+    f.close
+    return points1, fires_id, fires_time
+
 # def read_viirsdata(viirs_grp):
 #     data = {}
 #     for ky in viirs_data_keys:
