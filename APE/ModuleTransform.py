@@ -19,6 +19,12 @@ class TransformCoords:
         self.fact = 6371.0
         self.factmts = self.fact * 1000
 
+    def update_origin(self, origin):
+        phi0 = origin[0] * self.rd
+        self.ld0 = origin[1] * self.rd
+        self.s_p0 = np.sin(phi0)
+        self.c_p0 = np.cos(phi0)
+
     def latlon2xykm(self, lat, lon):
         ld = lon * self.rd
         phi = lat * self.rd
