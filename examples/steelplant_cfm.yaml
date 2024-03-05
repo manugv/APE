@@ -24,13 +24,13 @@ EmissionEstimation:
   CFM:
     Plumeheight:
       Type: Constant   # Constant
-      Height: 200      # injht or 10 or 100 in m
+      Height: 100      # injht or 10 or 100 in m
       HeightFromSurface: True  # height from the surface
       Name: Const100   # name of the emission variable in the output file
     
     # if the velocity fields already exist
     Flow:
-      Dir: '/data/manugv/outputdir/'   # directory with velocity fields or where they have to be downloaded
+      Dir: '/data/manugv/outputdir/industrial/'   # directory with velocity fields or where they have to be downloaded
       # for 10m and 100m /nfs/METEO/ERA5/
       cdsapi:  # url and key to download data
         url: https://cds.climate.copernicus.eu/api/v2 

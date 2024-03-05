@@ -18,7 +18,7 @@ try:
     from .ModPlume_Detection import segment_image_plume
     from .ModuleWrite import WriteData
     from .ModuleRead import ReadData
-    from .ModEE_CrossSectionalFlux import crosssectionalflux
+    from .ModEE_CrossSectionalFlux import crosssectionalflux_constant
     from .ModEE_Divergence import creategrid_divergence, divergence
 except ImportError:
     print("Module loading failed")
@@ -126,7 +126,7 @@ def computedivergence(params, writedata=None):
     # Initialize a file to write data
     if writedata is None:
         writedata = WriteData(params.output_file)
-    # Run APE Algorithm for a day
+
     temporaldivergencedata = None
     # create a divergence grid
     datagrid = creategrid_divergence(1000, params.transform)
@@ -196,6 +196,6 @@ def estimatecfmemission(params, writedata):
         print("Computing emissions for:", _key)
         data = _readdata.satellite(_key)
         plumecont = _readdata.plume(_key)
-        massflux, estd_emission = crosssectionalflux(params, data, plumecont, params.transform)
+        massflux, estd_emission = crosssectionalflux_constant(params, data, plumecont, params.transform)
         print("       computed")
         writedata.write_cfm(_key, massflux)
