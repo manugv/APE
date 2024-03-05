@@ -20,7 +20,7 @@ class InjectionHeight:
 
     """
 
-    def __init__(self, filename, day):
+    def __init__(self, datadir, day):
         """Short summary.
 
         Parameters
@@ -37,7 +37,7 @@ class InjectionHeight:
 
         """
         ma = date(1900, 1, 1)
-
+        filename = self._getfilename(datadir, day)
         ff = Dataset(filename, "r")  # data/2020_09_gfas_data.nc
         lattmp = ff["latitude"][:].data
         lontmp = ff["longitude"][:].data
@@ -57,11 +57,18 @@ class InjectionHeight:
         self.lat_deg = np.flip(lattmp)
         self.lon_deg = lontmp
         self.injh = np.flip(injh, axis=0)
-        self.f_ht = RegularGridInterpolator(
-            (self.lat_deg, self.lon_deg), self.injh, method="nearest"
-        )
+        self.f_ht = RegularGridInterpolator((self.lat_deg, self.lon_deg), self.injh, method="nearest")
 
-    def correct_longitude(longitude):
+    def _getfilename(self, datadir, day):
+        _date = day.strftime("%Y_%m_%d")
+        _file = datadir + _date + ".nc"
+        if Path(_file).exists():
+            return _file
+        _file1 = datadir + day.strftime("%Y_%m") + ".nc"
+        if Path(_file1).exists():
+            return _file1
+
+    def correct_longitude(self, longitude):
         """Convert longitude to 0-360 range.
 
         Parameters
@@ -128,26 +135,29 @@ def download_injectionheight(outputdir, _day, url0, key0):
         ADS key https://ads.atmosphere.copernicus.eu/api-how-to
 
     """
-    _date = _day.strftime("%Y-%m-%d")
+    _date = _day.strftime("%Y_%m_%d")
     _file = outputdir + _date + ".nc"
-    _file1 = outputdir + _day.strftime("%Y-%m") + ".nc"
+    _file1 = outputdir + _day.strftime("%Y_%m") + ".nc"
     fl = Path(_file)
     fl1 = Path(_file1)
-    
+
     if fl.exists() or fl1.exists():
         print(" Injection height data exists")
     else:
         print("   Downloading Injection height data")
         c = cdsapi.Client(url=url0, key=key0)
-        c.retrieve('cams-global-fire-emissions-gfas',
-                   {
-                       'date': _date,
-                       'format': 'netcdf',
-                       'variable': ['altitude_of_plume_bottom', 'altitude_of_plume_top',
-                                    'injection_height', 'mean_altitude_of_maximum_injection',
-                       ],
-                   },
-                   _file)
-        print("                    Downloaded"
-
-        
+        c.retrieve(
+            "cams-global-fire-emissions-gfas",
+            {
+                "date": _date,
+                "format": "netcdf",
+                "variable": [
+                    "altitude_of_plume_bottom",
+                    "altitude_of_plume_top",
+                    "injection_height",
+                    "mean_altitude_of_maximum_injection",
+                ],
+            },
+            _file,
+        )
+        print("                    Downloaded")
