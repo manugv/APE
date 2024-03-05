@@ -340,16 +340,14 @@ def extractfilter_satellitedata(data, src, cutoff=20):
         # Extract the data
         if extracteddata.flag_gridsizefilter:
             extracteddata = _extractgranule(pixel_loc, data, extracteddata)
-            if not extracteddata.flag_goodsatellitedata:
-                return extracteddata
             uniqueid = generateuniqueid(extracteddata.measurement_time, extracteddata.source)
-            extracteddata.__setattr__("uniqueid", uniqueid)
+            setattr(extracteddata, "uniqueid", uniqueid)
             return extracteddata
         else:
             print("  Grid sizes are large")
-            extracteddata.__setattr__("flag_goodsatellitedata", False)
+            setattr(extracteddata, "flag_goodsatellitedata", False)
             return extracteddata
     else:
         print("  Source not in the orbit")
-        extracteddata.__setattr__("flag_goodsatellitedata", False)
+        setattr(extracteddata, "flag_goodsatellitedata", False)
         return extracteddata
