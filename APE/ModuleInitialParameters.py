@@ -48,7 +48,7 @@ class InputParameters:
         # Fire parameters
         if _f["Source"] == "Fire":
             self._init_fireparams(_f["Fire"])
-            self.output_file_prefix = self.output_dir + self.file_prefix
+            self.output_file_prefix = self.output_dir + self.file_prefix + "_"
 
         # Industrial sources
         if _f["Source"] == "Industrial":
@@ -96,7 +96,11 @@ class InputParameters:
             emis.flow = Flowinfo(_em1["Flow"])
             # if injection height is given then file to it needed
             if emis.plumeheight == "injht":
-                emis.injht_dir = _em1["Plumeheight"]["InjectionHeightDir"]
+                _tmp = _em1["Plumeheight"]["InjectionHeight"]
+                emis.injht_dir = _tmp["Dir"]
+                if "adsapi" in _tmp.keys():
+                    emis.injht_adsapiurl = _tmp["adsapi"]["url"]
+                    emis.injht_adsapikey = _tmp["adsapi"]["key"]                    
             # if the plume height is varying
             if emis.plumeheighttype == "Varying":
                 _sim = _em1["Simulation"]

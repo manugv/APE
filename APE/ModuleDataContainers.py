@@ -70,12 +70,15 @@ class ROI:
 class Flowinfo:
     def __init__(self, _key):
         self.inputdir = _key["Dir"]
+        self.flowdir = _key["Dir"]        
         if "cdsapi" in _key.keys():
             self.cdsapiurl = _key["cdsapi"]["url"]
-            self.cdsapikey = _key["cdsapi"]["key"]            
+            self.cdsapikey = _key["cdsapi"]["key"]
         if "FlowField" in _key.keys():
             self.file_flow = _key["FlowField"]
             self.file_pres = _key["SurfacePresGeop"]
+            self.file_flow_suffix = _key["FlowField"]
+            self.file_pres_suffix = _key["SurfacePresGeop"]
             self.modellevels = _key["ModelLevels"]
             self.origin = np.zeros((2))
 

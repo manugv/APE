@@ -219,12 +219,14 @@ class SourcesInit:
 
 
 class InitializeSource:
-    def __init__(self, srcs, topology, heightfromsurface):
+    def __init__(self, lat, lon, z, topology, heightfromsurface):
         self.topo_flag = heightfromsurface
-        df0 = self.get_locations_fromarray(srcs[0], srcs[1], srcs[2], shift=-500)
-        df1 = self.get_locations_fromarray(srcs[0], srcs[1], srcs[2], shift=0)
-        df2 = self.get_locations_fromarray(srcs[0], srcs[1], srcs[2], shift=500)
-        df = concat((df0, df1, df2))
+        # df0 = self.get_locations_fromarray(lat, lon, z, shift=-500)
+        df1 = self.get_locations_fromarray(lat, lon, z, shift=0)
+        # df2 = self.get_locations_fromarray(lat, lon, z, shift=-500)
+        # df2 = self.get_locations_fromarray(srcs[0], srcs[1], srcs[2], shift=-500)
+        # df = concat((df0, df1, df2))
+        df = df1
         self.nos = len(df)
         self.locs = df[["lat", "lon", "z"]].values
         self.mass = np.ones(self.nos)

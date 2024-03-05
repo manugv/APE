@@ -9,7 +9,7 @@ from .ModEE_VerticalData import get_vertical_coord_vel
 from datetime import datetime, timedelta
 from netCDF4 import Dataset
 import numpy as np
-import glob
+from pathlib import Path
 
 # import pygrib
 
@@ -36,7 +36,7 @@ class FlowData:
         self.data1 = 0
         # Start and End times in ERA5 database
         st_time, end_time = self.__get_start_end_time(disp.model, simstarttime, simtimesec)
-        self.st_tim = st_time
+        self.st_time = st_time
         self.end_time = end_time
         if disp.simtype == "2d":
             # TODO: Implement start and end time in 2d
@@ -238,7 +238,8 @@ class FlowData:
         # TODO read grib files
         # __tmp = True
         # if __tmp:
-        allfiles = glob.glob(param.inputdir + "*.nc")
+        allfiles =  [str(p) for p in Path(param.flowdir).rglob("*.nc")]
+        # glob.glob(param.flowdir + "*.nc")
         # for velocity
         vel_qt_fls = [s for s in allfiles if param.file_flow in s]
         vel_qt_fls.sort()
@@ -290,19 +291,4 @@ class FlowData:
         pass
 
     def getvelocities_2d(self, filename):
-        self.filename_2d = filename
-        #     # read velocity data at 10mts and 100mts (lower resolution)
-        #     df1 = Dataset(filename, 'r')
-        #     # Flip if the latitude values are in descending order
-        #     self.lat = np.flip(df1['latitude'][:].data)
-        #     self.lon = df1['longitude'][:].data
-        #     # Here axis=0 is time (24hrs data) and axis=1 is latitude
-        #     if flowheight == '10':
-        #         self.u = np.flip(df1['u10'][:, :, :], axis=1)
-        #         self.v = np.flip(df1['v10'][:, :, :], axis=1)
-        #     elif flowheight == '100':
-        #         self.u = np.flip(df1['u100'][:, :, :], axis=1)
-        #         self.v = np.flip(df1['v100'][:, :, :], axis=1)
-        #     df1.close()
-        #     # TODO: Return success variables
-        #     return
+        pass

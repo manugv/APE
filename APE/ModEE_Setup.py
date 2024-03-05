@@ -38,7 +38,9 @@ class InitializeSim:
         # create fire sources for a fire
         # Define actual height of sources
         if self.simtype == "3d":
-            self.param_source = InitializeSource(sources, self.topology, param.plumeheightfromsurface)
+            self.param_source = InitializeSource(sources.latitude, sources.longitude,
+                                                 sources.injection_height, self.topology,
+                                                 param.plumeheightfromsurface)
 
         # Particles splitting
         self.particlesplit = param.param_partsplit.split

@@ -13,6 +13,8 @@ class WriteData:
     def __init__(self, filename):
         self.filename = filename + ".h5"
         self.grpname = ""
+        self.preprocessgrp = "Preprocess"
+        self.preprocessviirsgrp = "RawVIIRS"
         self.satellitegrpname = "Satellite"
         self.viirsgrpname = "VIIRS"
         self.plumedetectgrpname = "PlumeDetection"
@@ -30,6 +32,21 @@ class WriteData:
         else:
             return r_grp.create_group(grpname)
 
+    def preprocess_viirs(self, _key, data, _flags):
+        fl = h5py.File(self.filename, "a")
+        _grp = self.get_group(fl, self.preprocessgrp)
+        _rawgrp = self.get_group(_grp, self.preprocessviirsgrp)
+        for _ky in list(data.columns):
+            _rawgrp.create_dataset(_ky, data=data[_ky].values)
+        for _ky, val in _flags.items:
+            _rawgrp.create_dataset(_ky, data=val)
+        fl.close()
+
+        
+    def preprocess_satelliteorbit(self, _day, data, _flags):
+        # only for fires
+        pass
+        
     def satellite(self, uniqueid, data):
         fl = h5py.File(self.filename, "a")
         _grp = self.get_group(fl, uniqueid)
@@ -89,10 +106,27 @@ class WriteData:
                     _emgrp.create_dataset(_ky1, data=_val1)
             else:
                 grp.create_dataset(_ky, data=_val)
-        
-        
+
     
-        
+    def viirs(self, uniqueid, data):
+        # open file
+        fl = h5py.File(self.filename, "a")
+        _grp = self.get_group(fl, uniqueid)
+        viirs_grp = self.get_group(_grp, self.viirsgrpname)
+        for _ky in list(data.columns):
+            viirs_grp.create_dataset(_ky, data=data[_ky].values)
+        fl.close()
+
+    def injection_ht(self, uniqueid, flag, injection_height):
+        # open file
+        fl = h5py.File(self.filename, "a")
+        _grp = self.get_group(fl, uniqueid)
+        viirs_grp = self.get_group(_grp, self.viirsgrpname)
+        viirs_grp.create_dataset("flag_injectionheightexists", flag)
+        if flag:
+            viirs_grp.create_dataset("injectionheight", data=injection_height)
+        fl.close()
+
     # def write(self, sat_data, fire_data, plume_data):
     #     # file name is the name of the file based on month
     #     # day is the day on which fire was detected
