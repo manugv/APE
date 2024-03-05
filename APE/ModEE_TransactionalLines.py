@@ -197,17 +197,29 @@ def get_transactionline(n, ds, no_pts_one_side, pline):
     m = np.int_(2 * no_pts_one_side + 1)
     m1 = no_pts_one_side
     line_pts = np.zeros((n, m, 2))
+    istart = 0
+    iend = m
+    # right
+    line_pts[:, m1, :] = np.array(pline.coords)
+    for i in range(m1):
+        right = pline.parallel_offset(ds * (i + 1), "right")
+        dxr = right.length / (n - 1)
+        iend = m1 + 1 + i
+        if dxr == 0:
+            break
+        for j in range(n):
+            line_pts[j, m1 + 1 + i, :] = np.array(right.interpolate((j) * dxr).coords)[0]
+        
+    # left
     for i in range(m1):
         left = pline.parallel_offset(ds * (i + 1), "left")
-        right = pline.parallel_offset(ds * (i + 1), "right")
-        line_pts[:, m1, :] = np.array(pline.coords)
         dxl = left.length / (n - 1)
-        dxr = right.length / (n - 1)
+        if dxl == 0:
+            istart = m1 - i
+            break
         for j in range(n):
             line_pts[j, m1 - 1 - i, :] = np.array(left.interpolate((j) * dxl).coords)[0]
-            # line_pts[j, m1+1+i, :] = np.array(right.interpolate((n-1-j) * dxr).coords)[0]
-            line_pts[j, m1 + 1 + i, :] = np.array(right.interpolate((j) * dxr).coords)[0]
-    return line_pts, np.arange(-length_side, length_side + 1, ds)
+    return line_pts[:,istart:iend,:], np.arange(-length_side, length_side + 1, ds)[istart:iend]
 
 
 class InterpolateConcToTransactionLines:
@@ -405,12 +417,11 @@ def create_tlines_remove_background(satellitedata, plumecontainer, transform):
         flow (_type_): _description_
     """
     massflux = DataContainer()
-
     # Plume and transaction lines
     _pline = compute_medial_line(
         satellitedata.lat_nodes, satellitedata.lon_nodes, plumecontainer.plumemask, satellitedata.source, transform
     )
-    massflux.__setattr__("fitted_plumeline", _pline)
+    setattr(massflux, "fitted_plumeline", _pline)
 
     # Create line
     setattr(massflux, "transectspacing_km", 2.5)
@@ -421,7 +432,7 @@ def create_tlines_remove_background(satellitedata, plumecontainer, transform):
     )
     # this is done as dataline is a dict and massflux is a container
     for key, value in dataline.items():
-        massflux.__setattr__(key, value)
+        setattr(massflux, key, value)
 
     # Transform lat-lon of satellite
     xx, yy = transform.latlon2xykm(satellitedata.lat, satellitedata.lon)
