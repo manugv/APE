@@ -5,11 +5,11 @@ Created on Wed Feb  8 16:00:00 2024.
 
 @author: Arthur B, Manu Goudar
 """
-from .ModuleRead import ReadData, loadplumes
+from .ModuleRead import ReadData
 from pathlib import Path
 import cdsapi
 from datetime import datetime, timedelta
-from numpy import sign
+import numpy as np
 import pandas as pd
 from sklearn.cluster import DBSCAN
 
@@ -65,17 +65,17 @@ def download_pressureleveldata(area, filetime_fields, cdsapiurl, cdsapikey):
     # loop over different days if needed
     for dd in filetime_fields:
         c.retrieve(
-            'reanalysis-era5-pressure-levels',
+            "reanalysis-era5-pressure-levels",
             {
-                'product_type': 'reanalysis',
-                'format': 'netcdf',
-                'variable': ['geopotential', 'u_component_of_wind', 'v_component_of_wind'],
-                'pressure_level': ['900', '925', '950', '975', '1000'],
-                'year': dd[0],
-                'month': dd[1],
-                'day': dd[2],
-                'time': dd[3],
-                'area': area},
+                "product_type": "reanalysis",
+                "format": "netcdf",
+                "variable": ["geopotential", "u_component_of_wind", "v_component_of_wind"],
+                "pressure_level": ["900", "925", "950", "975", "1000"],
+                "year": dd[0],
+                "month": dd[1],
+                "day": dd[2],
+                "time": dd[3],
+                "area": area},
             dd[4])
 
 
@@ -96,7 +96,7 @@ def roundoff(num, _upper=False, delta=0.25):
     """
     if _upper:
         ii = num//delta
-        return (sign(ii) + ii)*delta
+        return (np.sign(ii) + ii)*delta
     else:
         return (num//delta)*delta
    
@@ -158,7 +158,7 @@ def checkanddownloadvelocity(_key, plumeheight, flow, source_name):
             # get time and filename
             timefile_fields = timefilename_download(_key[:13], filename)
             # get area
-            area = get_area(_key.split('_')[2])
+            area = get_area(_key.split("_")[2])
             # download data
             download_pressureleveldata(area, timefile_fields, flow.cdsapiurl, flow.cdsapikey)
             print("             .....Done")
@@ -221,10 +221,10 @@ def _getareamodellvl(cl1_latlon, extent_increase=2):
 
 def _get_minmaxtime(cl1_time):
     cl_time_min = cl1_time.min() - timedelta(hours=7)
-    cl_time_min.replace(minute=0, second=0, microsecond=0)
+    cl_time_min = cl_time_min.replace(minute=0, second=0, microsecond=0)
 
     cl_time_max = cl1_time.max() + timedelta(hours=1)
-    cl_time_max.replace(minute=0, second=0, microsecond=0)
+    cl_time_max = cl_time_max.replace(minute=0, second=0, microsecond=0)
     
     return cl_time_min, cl_time_max
 
@@ -255,7 +255,8 @@ def create_listoffiles(fires_id, fires_time, points, unique_labels, labels):
     cl_id_l = []
     cl_time_min_l = []
     cl_time_max_l = []
-    filename_l = []
+    filename_prefix = []
+    filename_suffix = []
     _date = fires_time[0].strftime("%Y%m%d")
     # get unique labels
     for _key in unique_labels:
@@ -268,19 +269,20 @@ def create_listoffiles(fires_id, fires_time, points, unique_labels, labels):
         timemin, timemax = _get_minmaxtime(cl1_time)
         cl_time_min_l.append(timemin)
         cl_time_max_l.append(timemax)
-        filename_l.append(_date +"_cl"+ str(_key))
+        filename_prefix.append(_date)
+        filename_suffix.append("_cl"+ str(_key))
         
     cluster = pd.DataFrame()
     cluster["fires"]=cl_id_l
     cluster["area"]=area_l
-    cluster['min_time']=cl_time_min_l 
-    cluster['max_time']=cl_time_max_l
-    cluster['filename']=filename_l
-    cluster.to_csv(str(_date) +'_cluster_table.csv')
+    cluster["min_time"]=cl_time_min_l 
+    cluster["max_time"]=cl_time_max_l
+    cluster["filename_prefix"]=filename_prefix
+    cluster["filename_suffix"]=filename_suffix    
     return cluster
 
 
-def _checkdownload_modellvldata(_area, filetime_fields, cdsapiurl, cdsapikey): 
+def _checkdownload_modellvldata(_area, filetime_fields, flowsuffix, pressuffix,  cdsapiurl, cdsapikey): 
     """Download ERA5 pressure data.
 
     Parameters
@@ -296,39 +298,39 @@ def _checkdownload_modellvldata(_area, filetime_fields, cdsapiurl, cdsapikey):
     """
     c = cdsapi.Client(url=cdsapiurl, key=cdsapikey)
     for dd in filetime_fields:
-        _file = Path(dd[3]+"_velocity_qt.nc")
+        _file = Path(dd[2]+"_velocity_qt.nc")
         if not _file.exists():
             print("   Downloading model level velocity....")
-            c.retrieve('reanalysis-era5-complete',
-                       {'date': dd[0],
-                        'levelist': '80/to/137/by/1',
-                        'levtype': 'ml',
-                        'param': '130/131/132/133/135',
-                        'stream': 'oper',
-                        'time': dd[1],
-                        'type': 'an',
-                        'area': _area,
-                        'grid': '0.25/0.25',
-                        'format': 'netcdf'},
-                       dd[3]+"_velocity_qt.nc")
+            c.retrieve("reanalysis-era5-complete",
+                       {"date": dd[0],
+                        "levelist": "80/to/137/by/1",
+                        "levtype": "ml",
+                        "param": "130/131/132/133/135",
+                        "stream": "oper",
+                        "time": dd[1],
+                        "type": "an",
+                        "area": _area,
+                        "grid": "0.25/0.25",
+                        "format": "netcdf"},
+                       dd[2]+flowsuffix)
         else:
             print("   Velocity data exists")
 
-        _file1 = Path(dd[3]+"_zlnsp.nc")
+        _file1 = Path(dd[2]+"_zlnsp.nc")
         if not _file1.exists():
             print("   Downloading model level surface pressure....")
-            c.retrieve('reanalysis-era5-complete',
-                       {'date': dd[0],
-                        'levelist': '1',
-                        'levtype': 'ml',
-                        'param': '129/152',
-                        'stream': 'oper',
-                        'time': dd[1],
-                        'type': 'an',
-                        'area': _area,
-                        'grid': '0.25/0.25',
-                        'format': 'netcdf'},
-                       dd[3]+"_zlnsp.nc")
+            c.retrieve("reanalysis-era5-complete",
+                       {"date": dd[0],
+                        "levelist": "1",
+                        "levtype": "ml",
+                        "param": "129/152",
+                        "stream": "oper",
+                        "time": dd[1],
+                        "type": "an",
+                        "area": _area,
+                        "grid": "0.25/0.25",
+                        "format": "netcdf"},
+                       dd[2]+pressuffix)
         else:
             print("   Surface pressure data exists")
 
@@ -339,7 +341,7 @@ def _check_create_dir(mydir):
         _path.mkdir(parents=True)
         
 
-def download_modelleveldata(inputfilename, outputdir, day, cdsapiurl, cdsapikey):
+def download_modelleveldata(inputfilename, flow, _day, cdsapiurl, cdsapikey):
     """Check for velocity data and download it if required. 
 
     Downloads the velocity data based on the input.
@@ -349,7 +351,7 @@ def download_modelleveldata(inputfilename, outputdir, day, cdsapiurl, cdsapikey)
     inputfilenaame : string
         Contains file name of the fire data (output of APE)
     outputdir : String
-        Output dir for model level data
+        Output dir for model level data params.estimateemission.flow.inputdir
     day : Datetime
         Date from date time
     cdsapiurl: String
@@ -358,37 +360,42 @@ def download_modelleveldata(inputfilename, outputdir, day, cdsapiurl, cdsapikey)
         String containing string from cdsapi : https://cds.climate.copernicus.eu/api-how-to
     """
     # load data for a day based on input datafile
-    _points, fires_id, fires_time = loadplumes(inputfilename, day)
+    _read = ReadData(inputfilename, _day, True)
+    _points, fires_id, fires_time = _read.datafordownloadml()
 
+    if not len(fires_id) > 0:
+        print("No plumes detected for this day")
+        return
+    
     # create cluster of firesources for a day
     unique_labels, labels = clusterpoints(_points)
-    cluster = create_listoffiles(fires_id, fires_time, points, unique_labels, labels)
+    cluster = create_listoffiles(fires_id, fires_time, _points, unique_labels, labels)
 
+    # create directories if they do not exist
+    new_outdir = flow.inputdir + _day.strftime("%Y/%m/%d") + "/"
+    _check_create_dir(new_outdir)
+    # write cluster data
+    cluster.to_csv(new_outdir +"cluster_table.csv")
+    
     # download and check data
     for i in range(len(cluster)):
         dd = cluster.loc[i]
-        # create directories if they do not exist
-        new_outdir = outputdir + dd.max_time.strftime("%Y/%m/%d") + "/"
-        _check_create_dir(new_outdir)
-
         # if measure time is a day before change data 
         if dd.min_time.day != dd.max_time.day:
             _date = dd.min_time.strftime("%Y-%m-%d")
             _time = dd.min_time.strftime("%H")+"/to/23/by/1"
-            d1 = [_date, _time, new_outdir + dd.filename+"_0"]
+            d1 = [_date, _time, new_outdir + dd.filename_prefix+"_0"+dd.filename_suffix]
 
             _date = dd.max_time.strftime("%Y-%m-%d")
             _time = "00/to/"+ dd.max_time.strftime("%H")+"/by/1"
-            d2 = [_date, _time, new_outdir + dd.filename+"_1"]
+            d2 = [_date, _time, new_outdir +dd.filename_prefix+"_1"+dd.filename_suffix]
             filetime_fields = [d1, d2]
         else:
             _date = dd.max_time.strftime("%Y-%m-%d")
             _time = dd.min_time.strftime("%H") + "/to/" + dd.max_time.strftime("%H")+"/by/1"
-            filetime_fields = [[_date, _time, new_outdir + dd.filename]]
-
+            filetime_fields = [[_date, _time, new_outdir + dd.filename_prefix + dd.filename_suffix]]
         # check if the velocity fields exist or not and download
-        print("   Checking/downloading model level data")
-        _checkdownload_modellvldata(dd.area, filetime_fields, cdsapiurl, cdsapikey)
-        print("                            Done!"
-
-
+        print("Checking/downloading model level data for following fires: ", dd.fires)
+        _checkdownload_modellvldata(dd.area, filetime_fields, flow.file_flow_suffix,
+                                    flow.file_pres_suffix, cdsapiurl, cdsapikey)
+        print("                            Done!")
