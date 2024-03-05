@@ -1,0 +1,80 @@
+# Time
+StartDate: 2022-1-4   # year-month-day
+EndDate: 2022-1-4
+
+# Satellite data directory
+SatelliteDir: '/nfs/Tropomi/lv2/Operational/CO/'
+# Output directory
+OutputDir: '/data/manugv/outputdir/fire/'
+
+Source: 'Fire'    # Fire, Industrial
+
+Fire:
+  # Region of interest
+  roi_name: 'Global'
+  roi: [-180, 180, -90, 90] # AU[113, 154, -44, -10]  # [lon_min, lon_max, lat_min, lat_max]
+  # VIIRS firedata directory
+  viirs_dir: '/data/manugv/Data/VIIRSData/'
+
+PlumeDetection:
+  Flag: True
+  
+EmissionEstimation:
+  Flag: True
+  MolarmassGas: 0.02801  # kg/mol for CO
+  Method: "CFM"  # CFM
+
+  CFM:
+    Plumeheight:
+      Type: Varying   # Constant, Varying
+      Height: injht      # injht or integer below 2000 in m
+      HeightFromSurface: True  # height from the surface
+      Name: lag      # name of the emission variable in the output file
+      # if height is 'injht' then provide GFAS Directory
+      InjectionHeight:
+        Dir: '/data/manugv/outputdir/fire/injht/'
+        adsapi:
+          url: 'https://ads.atmosphere.copernicus.eu/api/v2'
+          key: '15146:31462b5f-1daa-485c-a893-2c332123166f'
+    # if the velocity fields already exist
+    Flow:
+      Dir: '/data/manugv/outputdir/fire/velo/'
+      # Needed if velocity fields at height different from 10/100m
+      FlowField: 'velocity_qt.nc'  # suffix for file
+      SurfacePresGeop: 'zlnsp.nc'  # suffix for file
+      ModelLevels: [81, 137]
+      cdsapi:  # url and key to download data
+        url: https://cds.climate.copernicus.eu/api/v2 
+        key: 77709:f92a02d1-614a-422d-86ac-2bd49942727d
+
+
+    # If plume height is varying then
+    Simulation:
+      Time:
+        TotalTime: {Hour: 6, Minute: 00}
+        TimeStep: {Second: 30}
+        SaveDataTimeStep: {Minute: 10}
+      
+      Dispersion:
+        Type: 3d                      # 3d
+        Model: Forward                # Forward or Backward
+        Method: Euler                 # Euler
+      
+      MultipleParticleRelease:
+        Flag: True
+        TimeStep: {Minute: 2}
+
+      ParticleSplitting:
+        Split: False                   # True for split
+        SplitTime: {Second: 3600}      # in seconds
+
+      TrajectoriesToConcentrations:
+        Convert: False
+        StartSaveTime: {Hour: 2}        # w.r.t simulation start
+        TimeStep: {Minute: 30}
+        AveragingTime: {Minute: 10}     # Concentration time is end point
+        GridResolution: [0.05,0.05,50]  # [deg, deg, mts]
+
+      # output particles dir
+      OutputParticlesDir: '/data/manugv/outputdir/fire/particles/'
+    
