@@ -31,6 +31,17 @@ def createcartesiangrid(resolution, x=[-80000, 80000], y=[-80000, 80000]):
 
 
 def creategrid_divergence(res, transform):
+    """Create grid at input res.
+
+
+    Parameters
+    ----------
+    res : Float
+        Grid should be at this resolution(input in mts)
+    transform : Class TransformCoords
+        Transfrom coords
+
+    """
     data = DataContainer()
     # create new grid
     data.__setattr__("dx", res)
