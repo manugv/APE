@@ -3,7 +3,7 @@ requires = ["setuptools", "cython"]
 
 [project]
 name = "APE"
-version = ""
+version = "2.0"
 requires-python = ">= 3.11"
 readme = "README.md"
 license = {file = "LICENSE"}
@@ -15,7 +15,6 @@ Documentation = "https://readthedocs.org"
 Repository = "https://github.com/me/spam.git"
 Issues = "https://github.com/me/spam/issues"
 Changelog = "https://github.com/me/spam/blob/master/CHANGELOG.md"
-
 
 [tool.setuptools.dynamic]
 dependencies = {file = ["requirements.txt"]}
