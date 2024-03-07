@@ -135,12 +135,12 @@ def download_injectionheight(outputdir, _day, url0, key0):
         ADS key https://ads.atmosphere.copernicus.eu/api-how-to
 
     """
-    _date = _day.strftime("%Y_%m_%d")
-    _file = outputdir + _date + ".nc"
+    _file = outputdir + _day.strftime("%Y_%m_%d") + ".nc"
     _file1 = outputdir + _day.strftime("%Y_%m") + ".nc"
     fl = Path(_file)
     fl1 = Path(_file1)
 
+    _date = _day.strftime("%Y-%m-%d")    
     if fl.exists() or fl1.exists():
         print(" Injection height data exists")
     else:
