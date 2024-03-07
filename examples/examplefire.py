@@ -26,4 +26,3 @@ download_injectionheight(emis.injht_dir, _day, emis.injht_adsapiurl, emis.injht_
 
 #emission estimation
 iape.emissionestimationfires(_day, params)
-

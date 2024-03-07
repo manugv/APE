@@ -216,9 +216,9 @@ def datapreparation_plumedetection(_day, params, writedata=None):
 # TODO: Create a new method here. The location and time should be searched
 # and the files have to be identified based on that
 def getclusterid(filedir, key):
-    filename = filedir + "/" + "cluster_table.csv"
+    filename = filedir + "/" + "cluster_table.csv"    
     df = read_csv(filename)
-    return ((df[[key in fire for fire in df.fires]]).filename_suffix.values[0]).split("_")[-1]
+    return ((df[[key in fire for fire in df.fires]]).filename_suffix.values[0])[1:]
 
 
 def changetheflowparams(datedir, _key, params):
