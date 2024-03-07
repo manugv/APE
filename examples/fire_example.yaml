@@ -44,8 +44,8 @@ EmissionEstimation:
       SurfacePresGeop: 'zlnsp.nc'  # suffix for file
       ModelLevels: [81, 137]
       cdsapi:  # url and key to download data
-        url: https://cds.climate.copernicus.eu/api/v2 
-        key: 77709:f92a02d1-614a-422d-86ac-2bd49942727d
+        url: 'https://cds.climate.copernicus.eu/api/v2'
+        key: '77709:f92a02d1-614a-422d-86ac-2bd49942727d'
 
 
     # If plume height is varying then

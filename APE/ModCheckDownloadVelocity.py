@@ -270,7 +270,7 @@ def create_listoffiles(fires_id, fires_time, points, unique_labels, labels):
         cl_time_min_l.append(timemin)
         cl_time_max_l.append(timemax)
         filename_prefix.append(_date)
-        filename_suffix.append("_cl"+ str(_key))
+        filename_suffix.append("_cl"+ str(_key)+"_")
         
     cluster = pd.DataFrame()
     cluster["fires"]=cl_id_l
@@ -296,9 +296,10 @@ def _checkdownload_modellvldata(_area, filetime_fields, flowsuffix, pressuffix, 
     cdsapikey: String
         String containing string from cdsapi : https://cds.climate.copernicus.eu/api-how-to
     """
+    breakpoint()
     c = cdsapi.Client(url=cdsapiurl, key=cdsapikey)
     for dd in filetime_fields:
-        _file = Path(dd[2]+"_velocity_qt.nc")
+        _file = Path(dd[2]+flowsuffix)
         if not _file.exists():
             print("   Downloading model level velocity....")
             c.retrieve("reanalysis-era5-complete",
@@ -316,7 +317,7 @@ def _checkdownload_modellvldata(_area, filetime_fields, flowsuffix, pressuffix, 
         else:
             print("   Velocity data exists")
 
-        _file1 = Path(dd[2]+"_zlnsp.nc")
+        _file1 = Path(dd[2]+pressuffix)
         if not _file1.exists():
             print("   Downloading model level surface pressure....")
             c.retrieve("reanalysis-era5-complete",
