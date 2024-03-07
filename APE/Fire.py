@@ -224,7 +224,6 @@ def getclusterid(filedir, key):
 def changetheflowparams(datedir, _key, params):
     clusterid = getclusterid(params.flow.inputdir +  datedir, _key)
     # change the file directory
-    clusterid = clusterid + "_"
     params.flow.flowdir = params.flow.inputdir +  datedir
     params.flow.file_flow = clusterid + params.flow.file_flow_suffix
     params.flow.file_pres = clusterid + params.flow.file_pres_suffix
