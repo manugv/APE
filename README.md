@@ -31,7 +31,8 @@ APE is Automated Plume detection and Emission estimation algorithm.
 
   * At present, copy the code (src/ape) and example files to a folder.
     * Use cython to compile functions.pyx using setup.py
-	  - python setup.py build_ext --inplace
+	 - python setup.py build_ext --inplace
+    	 - Move functions.**.so to APE/functions.so 	
     * Examples can be found in examples folder.
     * Runs on python 3.12
   * requirements.txt covers all required packages to run the code.
