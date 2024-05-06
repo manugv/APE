@@ -1,6 +1,6 @@
-# ape #
+# Automated Plume detection and Emission estimation algorithm (APE) #
 
-APE is Automated Plume detection and Emission estimation algorithm.
+Goudar, M., Anema, J. C. S., Kumar, R., Borsdorff, T., and Landgraf, J.: Plume detection and emission estimate for biomass burning plumes from TROPOMI carbon monoxide observations using APE v1.1, Geosci. Model Dev., 16, 4835–4852, https://doi.org/10.5194/gmd-16-4835-2023, 2023.
 
 ### What is this repository for? ###
   - To compute Carbon Monoxide (CO) emissions for fires/industrial sources.
