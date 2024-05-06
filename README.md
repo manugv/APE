@@ -15,17 +15,6 @@ Goudar, M., Anema, J. C. S., Kumar, R., Borsdorff, T., and Landgraf, J.: Plume d
 
 * Detail documentation will be made available with time in docs.
 
-##### Versions
-  - X.YY
-      - X is based on an algorithm and does not change with minor versions.
-          - X <= 1 is based on the paper: Plume detection and estimate emissions for biomass burning plumes from TROPOMI Carbon monoxide observations using APE (2022) 
-      - XX refers to
-          - bug fixes,
-          - removal of deprecated functions/methods,
-          - change in output files (like adding units),
-          - codes to automatically download the data, and
-          - converting code to cython (if needed).
-
 
 ### Installation ###
 
@@ -38,5 +27,4 @@ Goudar, M., Anema, J. C. S., Kumar, R., Borsdorff, T., and Landgraf, J.: Plume d
   * requirements.txt covers all required packages to run the code.
 
 ##### Contact 
-  - Manu Goudar: m.goudar@sron.nl
-  - Tobias Borsdorff: t.borsdorff@sron.nl
+  - Manu Goudar: manu.gvm@gmail.com
